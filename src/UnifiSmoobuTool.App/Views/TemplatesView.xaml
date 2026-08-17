@@ -1,0 +1,40 @@
+<UserControl x:Class="UnifiSmoobuTool.App.Views.TemplatesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{Binding PlaceholderHelp}" TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.8"/>
+        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" Margin="0,0,0,8" TextWrapping="Wrap" Opacity="0.8"/>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.1*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <DockPanel Grid.Column="0">
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBox Text="{Binding NewLanguageCode, UpdateSourceTrigger=PropertyChanged}" Width="80" Margin="0,0,8,0"
+                             ToolTip="Language code, e.g. en, nl, de"/>
+                    <Button Content="Add language" Command="{Binding AddCommand}" Padding="10,4"/>
+                </StackPanel>
+                <ListBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" DisplayMemberPath="LanguageCode"/>
+            </DockPanel>
+
+            <DockPanel Grid.Column="2">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                    <Button Content="Save All" Command="{Binding SaveCommand}" Padding="10,4" Margin="0,0,8,0"/>
+                    <Button Content="Delete Selected" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedTemplate}" Padding="10,4"/>
+                </StackPanel>
+                <TextBox Text="{Binding SelectedTemplate.Body, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+            </DockPanel>
+        </Grid>
+    </Grid>
+</UserControl>

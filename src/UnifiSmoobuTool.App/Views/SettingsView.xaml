@@ -1,0 +1,98 @@
+<UserControl x:Class="UnifiSmoobuTool.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel Margin="8">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Save" Command="{Binding SaveCommand}" Padding="14,4" Margin="0,0,8,0"/>
+            <Button Content="Reload" Command="{Binding LoadCommand}" Padding="14,4"/>
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding StatusMessage}" Margin="0,0,0,8" TextWrapping="Wrap" Opacity="0.8"/>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+
+                <GroupBox Header="Smoobu" Margin="0,0,0,12" Padding="8">
+                    <StackPanel>
+                        <TextBlock Text="API key" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding SmoobuApiKey, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="UniFi Access" Margin="0,0,0,12" Padding="8">
+                    <StackPanel>
+                        <TextBlock Text="Controller host (e.g. https://192.168.1.1:12445)" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding UnifiAccessHost, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <TextBlock Text="API token" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding UnifiAccessApiToken, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <CheckBox Content="Trust the controller's certificate (needed for the default self-signed cert)"
+                                  IsChecked="{Binding UnifiAccessTrustAnySslCert}"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="Sync behavior" Margin="0,0,0,12" Padding="8">
+                    <StackPanel>
+                        <TextBlock Text="Polling interval (minutes)" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding PollingIntervalMinutes, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                        <TextBlock Text="Send the guest-info request this many days before arrival" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding MessageLeadDays, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                        <TextBlock Text="Default message language (used when the guest's language has no matching template)" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding DefaultTemplateLanguage, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                        <CheckBox Content="Automatically provision access when a reply is parsed with high confidence (otherwise it always waits for manual approval on the Dashboard)"
+                                  IsChecked="{Binding AutoApproveParsedReplies}" Margin="0,0,0,8"/>
+                        <TextBlock Text="License plate country/land indicators to strip (comma-separated)" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding LicensePlateCountryPrefixesText, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="Error email alerts (SMTP)" Margin="0,0,0,12" Padding="8">
+                    <StackPanel>
+                        <CheckBox Content="Send an email when Smoobu or UniFi Access calls keep failing" IsChecked="{Binding SmtpEnabled}" Margin="0,0,0,8"/>
+                        <TextBlock Text="SMTP host" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding SmtpHost, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Port" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding SmtpPort, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                            </StackPanel>
+                            <CheckBox Content="Use TLS" IsChecked="{Binding SmtpUseSsl}" VerticalAlignment="Bottom" Margin="0,0,0,4"/>
+                        </StackPanel>
+                        <TextBlock Text="Username" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding SmtpUsername, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Password" Margin="0,0,0,2"/>
+                        <PasswordBox x:Name="SmtpPasswordBox" Margin="0,0,0,8" PasswordChanged="SmtpPasswordBox_PasswordChanged"/>
+                        <TextBlock Text="From address" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding SmtpFromAddress, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Alert email goes to" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding SmtpToAddress, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="Error webhooks (e.g. Homey Pro)" Margin="0,0,0,24" Padding="8">
+                    <StackPanel>
+                        <Button Content="Add alert webhook" Command="{Binding AddErrorWebhookCommand}" Padding="10,4"
+                                HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                        <DataGrid ItemsSource="{Binding ErrorWebhooks}" AutoGenerateColumns="False" CanUserAddRows="False" MinHeight="140">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
+                                <DataGridComboBoxColumn Header="Method" Width="80"
+                                                         ItemsSource="{Binding DataContext.MethodOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                         SelectedItemBinding="{Binding Method}"/>
+                                <DataGridTextColumn Header="URL" Binding="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Width="2*"/>
+                                <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled}" Width="60"/>
+                                <DataGridTemplateColumn Header="" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Remove"
+                                                    Command="{Binding DataContext.DeleteErrorWebhookCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}" Padding="6,2"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

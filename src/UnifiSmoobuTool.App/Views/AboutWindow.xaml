@@ -1,0 +1,37 @@
+<Window x:Class="UnifiSmoobuTool.App.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About - UniFi Access - Smoobu Guest Access Tool" Height="480" Width="560"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="UniFi Access - Smoobu Guest Access Tool" FontSize="18" FontWeight="Bold"/>
+            <TextBlock x:Name="VersionText" Text="Version" Margin="0,2,0,0" Opacity="0.7"/>
+            <TextBlock Text="Built by Dirk Plat" FontWeight="Bold" Margin="0,12,0,0"/>
+            <TextBlock Text="Contact: dirkplat1999@gmail.com" Margin="0,2,0,0"/>
+            <TextBlock Text="Repository: github.com/dirkplat1999/uinifi-smoobu-tool" Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,12">
+            <TextBlock TextWrapping="Wrap">
+                <Run FontWeight="Bold" Text="License: PolyForm Noncommercial License 1.0.0"/>
+                <LineBreak/><LineBreak/>
+                <Run Text="This software is free to use, study, modify, and share for any noncommercial purpose: personal use, hobby projects, evaluation, education, research, and use by charitable, educational, public-research, public-safety/health, environmental, or government organizations."/>
+                <LineBreak/><LineBreak/>
+                <Run Text="Commercial use (selling or sublicensing it, offering it as a paid or ad-supported hosted service, or running it as part of a for-profit business) requires a separate commercial license from the copyright holder."/>
+                <LineBreak/><LineBreak/>
+                <Run Text="As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable for any damages arising from its use."/>
+                <LineBreak/><LineBreak/>
+                <Run Text="The full license text is available at polyformproject.org/licenses/noncommercial/1.0.0 and ships as LICENSE alongside this application."/>
+            </TextBlock>
+        </ScrollViewer>
+
+        <Button Grid.Row="2" Content="Close" Click="CloseButton_Click" Padding="16,4" HorizontalAlignment="Right"/>
+    </Grid>
+</Window>

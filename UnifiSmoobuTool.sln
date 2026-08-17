@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BC4DD388-5759-4335-BC77-48FA82D06EEB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnifiSmoobuTool.Core", "src\UnifiSmoobuTool.Core\UnifiSmoobuTool.Core.csproj", "{35698E3B-BEE7-49A6-B8F3-24D4193C9A6B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnifiSmoobuTool.Infrastructure", "src\UnifiSmoobuTool.Infrastructure\UnifiSmoobuTool.Infrastructure.csproj", "{C7C80D87-EA38-4CE8-9E7F-EB699DA43B82}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B5B1E5E7-AFC0-4C4E-83AC-D03A99752C40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnifiSmoobuTool.Core.Tests", "tests\UnifiSmoobuTool.Core.Tests\UnifiSmoobuTool.Core.Tests.csproj", "{5E986D41-948C-4CA7-95FA-80ECA5D67E5B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnifiSmoobuTool.Infrastructure.Tests", "tests\UnifiSmoobuTool.Infrastructure.Tests\UnifiSmoobuTool.Infrastructure.Tests.csproj", "{A1D75139-F4D0-4429-BE45-2051A3F5ACCA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnifiSmoobuTool.App", "src\UnifiSmoobuTool.App\UnifiSmoobuTool.App.csproj", "{6C4777E5-71CD-4973-9F13-EB301E7F677D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{35698E3B-BEE7-49A6-B8F3-24D4193C9A6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35698E3B-BEE7-49A6-B8F3-24D4193C9A6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35698E3B-BEE7-49A6-B8F3-24D4193C9A6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35698E3B-BEE7-49A6-B8F3-24D4193C9A6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7C80D87-EA38-4CE8-9E7F-EB699DA43B82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7C80D87-EA38-4CE8-9E7F-EB699DA43B82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7C80D87-EA38-4CE8-9E7F-EB699DA43B82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7C80D87-EA38-4CE8-9E7F-EB699DA43B82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E986D41-948C-4CA7-95FA-80ECA5D67E5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E986D41-948C-4CA7-95FA-80ECA5D67E5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E986D41-948C-4CA7-95FA-80ECA5D67E5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E986D41-948C-4CA7-95FA-80ECA5D67E5B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1D75139-F4D0-4429-BE45-2051A3F5ACCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1D75139-F4D0-4429-BE45-2051A3F5ACCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1D75139-F4D0-4429-BE45-2051A3F5ACCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1D75139-F4D0-4429-BE45-2051A3F5ACCA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C4777E5-71CD-4973-9F13-EB301E7F677D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C4777E5-71CD-4973-9F13-EB301E7F677D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C4777E5-71CD-4973-9F13-EB301E7F677D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C4777E5-71CD-4973-9F13-EB301E7F677D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{35698E3B-BEE7-49A6-B8F3-24D4193C9A6B} = {BC4DD388-5759-4335-BC77-48FA82D06EEB}
+		{C7C80D87-EA38-4CE8-9E7F-EB699DA43B82} = {BC4DD388-5759-4335-BC77-48FA82D06EEB}
+		{5E986D41-948C-4CA7-95FA-80ECA5D67E5B} = {B5B1E5E7-AFC0-4C4E-83AC-D03A99752C40}
+		{A1D75139-F4D0-4429-BE45-2051A3F5ACCA} = {B5B1E5E7-AFC0-4C4E-83AC-D03A99752C40}
+		{6C4777E5-71CD-4973-9F13-EB301E7F677D} = {BC4DD388-5759-4335-BC77-48FA82D06EEB}
+	EndGlobalSection
+EndGlobal

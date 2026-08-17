@@ -1,0 +1,26 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## Build output / packaging
+publish/
+Releases/
+*.nupkg
+
+## Local app data / secrets used during manual testing
+*.local.json
+appsettings.Local.json
+*.db
+*.db-shm
+*.db-wal
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## OS
+Thumbs.db
+Desktop.ini

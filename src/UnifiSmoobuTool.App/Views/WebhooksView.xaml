@@ -1,0 +1,57 @@
+<UserControl x:Class="UnifiSmoobuTool.App.Views.WebhooksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{Binding PlaceholderHelp}" TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.8"/>
+        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" Margin="0,0,0,8" TextWrapping="Wrap" Opacity="0.8"/>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Add automation" Command="{Binding AddCommand}" Padding="10,4"/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="3" ItemsSource="{Binding Webhooks}" SelectedItem="{Binding SelectedWebhook}"
+                  AutoGenerateColumns="False" CanUserAddRows="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
+                <DataGridComboBoxColumn Header="Apartment" Width="140"
+                                         ItemsSource="{Binding DataContext.Apartments, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                         SelectedValueBinding="{Binding ApartmentId}" SelectedValuePath="Id" DisplayMemberPath="Name"/>
+                <DataGridComboBoxColumn Header="Trigger" Width="140"
+                                         ItemsSource="{Binding DataContext.TriggerOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                         SelectedItemBinding="{Binding Trigger}"/>
+                <DataGridComboBoxColumn Header="Method" Width="80"
+                                         ItemsSource="{Binding DataContext.MethodOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                         SelectedItemBinding="{Binding Method}"/>
+                <DataGridTextColumn Header="URL" Binding="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Width="2*"/>
+                <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled}" Width="60"/>
+                <DataGridTemplateColumn Header="" Width="140">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Save"
+                                        Command="{Binding DataContext.SaveCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}" Padding="6,2" Margin="0,0,4,0"/>
+                                <Button Content="Delete"
+                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}" Padding="6,2"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <TextBlock Grid.Row="4" Text="Payload template (used for POST requests)" FontWeight="Bold" Margin="0,16,0,4"/>
+        <TextBox Grid.Row="5" Text="{Binding SelectedWebhook.PayloadTemplate, UpdateSourceTrigger=PropertyChanged}"
+                 AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+    </Grid>
+</UserControl>

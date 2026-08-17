@@ -1,0 +1,52 @@
+<UserControl x:Class="UnifiSmoobuTool.App.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+            <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="10,4" Margin="0,0,8,0"/>
+            <Button Content="Sync Now" Command="{Binding SyncNowCommand}" Padding="10,4"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" Margin="0,0,0,8" TextWrapping="Wrap" Opacity="0.8"/>
+
+        <TextBlock Grid.Row="2" Text="Upcoming reservations" FontWeight="Bold" Margin="0,0,0,4"/>
+        <DataGrid Grid.Row="3" ItemsSource="{Binding UpcomingReservations}"
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Guest" Binding="{Binding GuestName}" Width="180"/>
+                <DataGridTextColumn Header="Apartment" Binding="{Binding ApartmentName}" Width="160"/>
+                <DataGridTextColumn Header="Arrival" Binding="{Binding Arrival}" Width="100"/>
+                <DataGridTextColumn Header="Departure" Binding="{Binding Departure}" Width="100"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="140"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <TextBlock Grid.Row="4" Text="Pending review (ambiguous guest replies)" FontWeight="Bold" Margin="0,16,0,4"/>
+
+        <DataGrid Grid.Row="5" ItemsSource="{Binding PendingReview}" AutoGenerateColumns="False" CanUserAddRows="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Guest" Binding="{Binding GuestName}" Width="180" IsReadOnly="True"/>
+                <DataGridTextColumn Header="License plate" Binding="{Binding LicensePlate, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
+                <DataGridTextColumn Header="PIN" Binding="{Binding PinCode, UpdateSourceTrigger=PropertyChanged}" Width="100"/>
+                <DataGridTemplateColumn Header="" Width="160">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Approve &amp; Provision"
+                                    Command="{Binding DataContext.ApproveCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                    CommandParameter="{Binding}" Padding="6,2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>
