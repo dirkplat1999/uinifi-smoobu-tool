@@ -26,7 +26,8 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
         smtp_username AS SmtpUsername,
         smtp_password_protected AS SmtpPasswordProtected,
         smtp_from_address AS SmtpFromAddress,
-        smtp_to_address AS SmtpToAddress
+        smtp_to_address AS SmtpToAddress,
+        run_in_background_when_closed AS RunInBackgroundWhenClosed
         """;
 
     private readonly SqliteConnectionFactory _factory;
@@ -78,6 +79,7 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
                 ? new List<string>()
                 : JsonSerializer.Deserialize<List<string>>(row.LicensePlateCountryPrefixesJson) ?? new List<string>(),
             Smtp = smtp,
+            RunInBackgroundWhenClosed = row.RunInBackgroundWhenClosed,
         };
     }
 
@@ -92,13 +94,13 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
                  unifi_access_trust_any_ssl_cert, polling_interval_minutes, message_lead_days,
                  default_template_language, test_mode_enabled, auto_approve_parsed_replies,
                  license_plate_country_prefixes_json, smtp_host, smtp_port, smtp_use_ssl, smtp_username,
-                 smtp_password_protected, smtp_from_address, smtp_to_address)
+                 smtp_password_protected, smtp_from_address, smtp_to_address, run_in_background_when_closed)
             VALUES
                 (1, @SmoobuApiKeyProtected, @SmoobuApiSecretProtected, @UnifiAccessHost, @UnifiAccessApiTokenProtected,
                  @UnifiAccessTrustAnySslCert, @PollingIntervalMinutes, @MessageLeadDays,
                  @DefaultTemplateLanguage, @TestModeEnabled, @AutoApproveParsedReplies,
                  @LicensePlateCountryPrefixesJson, @SmtpHost, @SmtpPort, @SmtpUseSsl, @SmtpUsername,
-                 @SmtpPasswordProtected, @SmtpFromAddress, @SmtpToAddress)
+                 @SmtpPasswordProtected, @SmtpFromAddress, @SmtpToAddress, @RunInBackgroundWhenClosed)
             ON CONFLICT(id) DO UPDATE SET
                 smoobu_api_key_protected = excluded.smoobu_api_key_protected,
                 smoobu_api_secret_protected = excluded.smoobu_api_secret_protected,
@@ -117,7 +119,8 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
                 smtp_username = excluded.smtp_username,
                 smtp_password_protected = excluded.smtp_password_protected,
                 smtp_from_address = excluded.smtp_from_address,
-                smtp_to_address = excluded.smtp_to_address;
+                smtp_to_address = excluded.smtp_to_address,
+                run_in_background_when_closed = excluded.run_in_background_when_closed;
             """,
             new
             {
@@ -139,6 +142,7 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
                 SmtpPasswordProtected = _protector.Protect(settings.Smtp?.Password),
                 SmtpFromAddress = settings.Smtp?.FromAddress,
                 SmtpToAddress = settings.Smtp?.ToAddress,
+                settings.RunInBackgroundWhenClosed,
             }).ConfigureAwait(false);
     }
 
@@ -162,5 +166,6 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
         public byte[]? SmtpPasswordProtected { get; set; }
         public string? SmtpFromAddress { get; set; }
         public string? SmtpToAddress { get; set; }
+        public bool RunInBackgroundWhenClosed { get; set; } = true;
     }
 }

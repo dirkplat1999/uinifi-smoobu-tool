@@ -14,8 +14,9 @@ public sealed class ReservationRowViewModel
 
     public string GuestName => Reservation.GuestFullName;
     public string ApartmentName => Reservation.ApartmentName;
-    public string Arrival => Reservation.Arrival.ToString("yyyy-MM-dd");
-    public string Departure => Reservation.Departure.ToString("yyyy-MM-dd");
+    public string Language => string.IsNullOrWhiteSpace(Reservation.GuestLanguage) ? "-" : Reservation.GuestLanguage.ToUpperInvariant();
+    public string Arrival => Reservation.Arrival.ToString("dd-MM-yyyy");
+    public string Departure => Reservation.Departure.ToString("dd-MM-yyyy");
 
     public string Status
     {

@@ -15,7 +15,7 @@
 
         <DataGrid Grid.Row="1" ItemsSource="{Binding Entries}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss'}" Width="150"/>
+                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat='dd-MM-yyyy HH:mm:ss'}" Width="150"/>
                 <DataGridTextColumn Header="Level" Binding="{Binding Level}" Width="90"/>
                 <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*"/>
             </DataGrid.Columns>

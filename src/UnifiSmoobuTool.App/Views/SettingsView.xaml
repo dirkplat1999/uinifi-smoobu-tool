@@ -11,12 +11,24 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="760" HorizontalAlignment="Left">
 
+                <GroupBox Header="Startup &amp; background" Margin="0,0,0,12" Padding="8">
+                    <StackPanel>
+                        <CheckBox Content="Keep running in the background when the window is closed (use the tray icon or File &gt; Exit to fully quit)"
+                                  IsChecked="{Binding RunInBackgroundWhenClosed}" Margin="0,0,0,8"/>
+                        <CheckBox Content="Start automatically when I log in to Windows"
+                                  IsChecked="{Binding StartWithWindows}" IsEnabled="{Binding StartWithWindowsSupported}"/>
+                        <TextBlock Text="(Only available for an installed copy of the app - not when running from the portable zip)"
+                                   Opacity="0.7" Margin="0,2,0,0" Visibility="{Binding StartWithWindowsSupported, Converter={StaticResource InverseBoolToVis}}"/>
+                    </StackPanel>
+                </GroupBox>
+
                 <GroupBox Header="Smoobu" Margin="0,0,0,12" Padding="8">
                     <StackPanel>
                         <TextBlock Text="API key (label)" Margin="0,0,0,2"/>
                         <TextBox Text="{Binding SmoobuApiKey, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
                         <TextBlock Text="API secret (leave empty if your account only has a legacy API key, no secret)" Margin="0,0,0,2" TextWrapping="Wrap"/>
                         <PasswordBox x:Name="SmoobuApiSecretBox" Margin="0,0,0,8" PasswordChanged="SmoobuApiSecretBox_PasswordChanged"/>
+                        <Button Content="Test connection" Command="{Binding TestSmoobuConnectionCommand}" Padding="10,4" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </GroupBox>
 
@@ -27,7 +39,8 @@
                         <TextBlock Text="API token" Margin="0,0,0,2"/>
                         <TextBox Text="{Binding UnifiAccessApiToken, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
                         <CheckBox Content="Trust the controller's certificate (needed for the default self-signed cert)"
-                                  IsChecked="{Binding UnifiAccessTrustAnySslCert}"/>
+                                  IsChecked="{Binding UnifiAccessTrustAnySslCert}" Margin="0,0,0,8"/>
+                        <Button Content="Test connection" Command="{Binding TestUnifiAccessConnectionCommand}" Padding="10,4" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </GroupBox>
 
@@ -65,7 +78,8 @@
                         <TextBlock Text="From address" Margin="0,0,0,2"/>
                         <TextBox Text="{Binding SmtpFromAddress, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
                         <TextBlock Text="Alert email goes to" Margin="0,0,0,2"/>
-                        <TextBox Text="{Binding SmtpToAddress, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBox Text="{Binding SmtpToAddress, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <Button Content="Send test email" Command="{Binding TestSmtpCommand}" Padding="10,4" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </GroupBox>
 
@@ -81,12 +95,17 @@
                                                          SelectedItemBinding="{Binding Method}"/>
                                 <DataGridTextColumn Header="URL" Binding="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Width="2*"/>
                                 <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled}" Width="60"/>
-                                <DataGridTemplateColumn Header="" Width="80">
+                                <DataGridTemplateColumn Header="" Width="140">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="Remove"
-                                                    Command="{Binding DataContext.DeleteErrorWebhookCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                    CommandParameter="{Binding}" Padding="6,2"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Content="Send test"
+                                                        Command="{Binding DataContext.SendTestErrorWebhookCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}" Padding="6,2" Margin="0,0,4,0"/>
+                                                <Button Content="Remove"
+                                                        Command="{Binding DataContext.DeleteErrorWebhookCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}" Padding="6,2"/>
+                                            </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

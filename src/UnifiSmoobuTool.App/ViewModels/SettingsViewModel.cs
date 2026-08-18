@@ -3,6 +3,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UnifiSmoobuTool.Core.Abstractions;
 using UnifiSmoobuTool.Core.Models;
+using UnifiSmoobuTool.Core.Services;
+using UnifiSmoobuTool.Infrastructure.Notifications;
+using UnifiSmoobuTool.Infrastructure.Startup;
 
 namespace UnifiSmoobuTool.App.ViewModels;
 
@@ -35,6 +38,18 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly IAppSettingsStore _settingsStore;
     private readonly IWebhookConfigStore _webhookStore;
+    private readonly ISmoobuClient _smoobuClient;
+    private readonly IUnifiAccessClient _unifiAccessClient;
+    private readonly SmtpAlerter _smtpAlerter;
+    private readonly WebhookDispatcher _webhookDispatcher;
+
+    [ObservableProperty]
+    private bool _runInBackgroundWhenClosed = true;
+
+    [ObservableProperty]
+    private bool _startWithWindows;
+
+    public bool StartWithWindowsSupported => WindowsStartupManager.IsSupported;
 
     [ObservableProperty]
     private string _smoobuApiKey = "";
@@ -99,10 +114,20 @@ public sealed partial class SettingsViewModel : ObservableObject
     public ObservableCollection<ErrorWebhookRowViewModel> ErrorWebhooks { get; } = new();
     public WebhookMethod[] MethodOptions { get; } = Enum.GetValues<WebhookMethod>();
 
-    public SettingsViewModel(IAppSettingsStore settingsStore, IWebhookConfigStore webhookStore)
+    public SettingsViewModel(
+        IAppSettingsStore settingsStore,
+        IWebhookConfigStore webhookStore,
+        ISmoobuClient smoobuClient,
+        IUnifiAccessClient unifiAccessClient,
+        SmtpAlerter smtpAlerter,
+        WebhookDispatcher webhookDispatcher)
     {
         _settingsStore = settingsStore;
         _webhookStore = webhookStore;
+        _smoobuClient = smoobuClient;
+        _unifiAccessClient = unifiAccessClient;
+        _smtpAlerter = smtpAlerter;
+        _webhookDispatcher = webhookDispatcher;
     }
 
     [RelayCommand]
@@ -112,6 +137,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             var settings = await _settingsStore.GetAsync();
+            RunInBackgroundWhenClosed = settings.RunInBackgroundWhenClosed;
+            StartWithWindows = WindowsStartupManager.IsSupported && WindowsStartupManager.IsEnabled();
             SmoobuApiKey = settings.SmoobuApiKey ?? "";
             SmoobuApiSecret = settings.SmoobuApiSecret ?? "";
             UnifiAccessHost = settings.UnifiAccessHost ?? "";
@@ -166,6 +193,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             var settings = await _settingsStore.GetAsync();
+            settings.RunInBackgroundWhenClosed = RunInBackgroundWhenClosed;
             settings.SmoobuApiKey = string.IsNullOrWhiteSpace(SmoobuApiKey) ? null : SmoobuApiKey.Trim();
             settings.SmoobuApiSecret = string.IsNullOrWhiteSpace(SmoobuApiSecret) ? null : SmoobuApiSecret.Trim();
             settings.UnifiAccessHost = string.IsNullOrWhiteSpace(UnifiAccessHost) ? null : UnifiAccessHost.Trim();
@@ -193,6 +221,18 @@ public sealed partial class SettingsViewModel : ObservableObject
                 : null;
 
             await _settingsStore.SaveAsync(settings);
+
+            if (WindowsStartupManager.IsSupported)
+            {
+                try
+                {
+                    WindowsStartupManager.SetEnabled(StartWithWindows);
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Settings saved, but couldn't update the Windows startup entry: {ex.Message}";
+                }
+            }
 
             foreach (var row in ErrorWebhooks)
             {
@@ -244,6 +284,135 @@ public sealed partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Couldn't remove alert: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>Saves first so the test always exercises what's currently on screen, not
+    /// whatever was last persisted.</summary>
+    [RelayCommand]
+    private async Task TestSmoobuConnectionAsync()
+    {
+        IsBusy = true;
+        StatusMessage = "Saving settings and testing the Smoobu connection...";
+        try
+        {
+            await SaveAsync();
+            var apartments = await _smoobuClient.GetApartmentsAsync();
+            StatusMessage = $"Smoobu connection OK - found {apartments.Count} apartment(s).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Smoobu connection test failed: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task TestUnifiAccessConnectionAsync()
+    {
+        IsBusy = true;
+        StatusMessage = "Saving settings and testing the UniFi Access connection...";
+        try
+        {
+            await SaveAsync();
+            var resources = await _unifiAccessClient.GetDoorGroupTopologyAsync();
+            StatusMessage = $"UniFi Access connection OK - found {resources.Count} door/door-group resource(s).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"UniFi Access connection test failed: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task TestSmtpAsync()
+    {
+        if (!SmtpEnabled)
+        {
+            StatusMessage = "Enable and fill in SMTP settings first.";
+            return;
+        }
+
+        IsBusy = true;
+        StatusMessage = "Saving settings and sending a test email...";
+        try
+        {
+            await SaveAsync();
+            var settings = await _settingsStore.GetAsync();
+            if (settings.Smtp is null)
+            {
+                StatusMessage = "SMTP is not configured.";
+                return;
+            }
+
+            await _smtpAlerter.SendAsync(
+                settings.Smtp, "UniFi Smoobu Tool - test email",
+                "This is a test email to confirm your SMTP settings work.");
+            StatusMessage = $"Test email sent to {settings.Smtp.ToAddress}. Check the Logs tab if it doesn't arrive.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Couldn't send test email: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SendTestErrorWebhookAsync(ErrorWebhookRowViewModel? row)
+    {
+        if (row is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(row.Url))
+        {
+            StatusMessage = "Enter a URL for this alert first.";
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            var config = new WebhookConfig
+            {
+                Id = row.Id,
+                ApartmentId = null,
+                Name = row.Name,
+                Trigger = AutomationTrigger.ErrorOccurred,
+                Method = row.Method,
+                Url = row.Url,
+                PayloadTemplate = string.IsNullOrWhiteSpace(row.PayloadTemplate) ? null : row.PayloadTemplate,
+                Enabled = true,
+            };
+
+            var placeholders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["component"] = "Test",
+                ["message"] = "This is a test alert from UniFi Smoobu Tool.",
+                ["timestamp"] = DateTimeOffset.UtcNow.ToString("O"),
+            };
+
+            await _webhookDispatcher.DispatchAsync(config, placeholders);
+            StatusMessage = $"Sent a test alert to \"{row.Name}\". Check the target system (and the Logs tab if nothing arrived).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Couldn't send test alert: {ex.Message}";
         }
         finally
         {

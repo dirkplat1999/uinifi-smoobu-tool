@@ -309,8 +309,8 @@ public sealed class BookingSyncOrchestrator
         ["guest_last_name"] = reservation.GuestLastName,
         ["guest_full_name"] = reservation.GuestFullName,
         ["apartment_name"] = reservation.ApartmentName,
-        ["arrival_date"] = reservation.Arrival.ToString("yyyy-MM-dd"),
-        ["departure_date"] = reservation.Departure.ToString("yyyy-MM-dd"),
+        ["arrival_date"] = reservation.Arrival.ToString("dd-MM-yyyy"),
+        ["departure_date"] = reservation.Departure.ToString("dd-MM-yyyy"),
         ["reservation_id"] = reservation.Id.ToString(),
     };
 }

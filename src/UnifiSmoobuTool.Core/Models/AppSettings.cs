@@ -32,6 +32,11 @@ public sealed class AppSettings
         new() { "NL", "D", "B", "F", "GB", "PL", "DK", "LUX", "A" };
 
     public SmtpSettings? Smtp { get; set; }
+
+    /// <summary>When true (default), closing the main window minimizes it to the system tray
+    /// instead of exiting, so the background sync loop keeps running. When false, closing the
+    /// window exits the app entirely.</summary>
+    public bool RunInBackgroundWhenClosed { get; set; } = true;
 }
 
 public sealed class SmtpSettings

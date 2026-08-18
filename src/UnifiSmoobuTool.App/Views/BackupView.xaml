@@ -24,7 +24,7 @@
 
                 <StackPanel Visibility="{Binding PendingImportPreview, Converter={StaticResource NullToVis}}">
                     <TextBlock FontWeight="Bold" Margin="0,0,0,4" Text="Backup contents"/>
-                    <TextBlock Text="{Binding PendingImportPreview.CreatedAtUtc, StringFormat='Created: {0:g} UTC'}"/>
+                    <TextBlock Text="{Binding PendingImportPreview.CreatedAtUtc, StringFormat='Created: {0:dd-MM-yyyy HH:mm} UTC'}"/>
                     <TextBlock Text="{Binding PendingImportPreview.TemplateCount, StringFormat='Message templates: {0}'}"/>
                     <TextBlock Text="{Binding PendingImportPreview.WebhookCount, StringFormat='Automation webhooks: {0}'}"/>
                     <TextBlock Text="{Binding PendingImportPreview.ApartmentMappingCount, StringFormat='Apartment mappings: {0}'}"/>

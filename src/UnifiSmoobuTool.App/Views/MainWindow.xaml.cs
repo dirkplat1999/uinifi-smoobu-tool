@@ -8,6 +8,7 @@ namespace UnifiSmoobuTool.App.Views;
 public partial class MainWindow : Window
 {
     private readonly UpdateChecker _updateChecker;
+    private readonly SettingsViewModel _settingsViewModel;
 
     public MainWindow(
         DashboardViewModel dashboardViewModel,
@@ -22,6 +23,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _updateChecker = updateChecker;
+        _settingsViewModel = settingsViewModel;
 
         DashboardViewControl.DataContext = dashboardViewModel;
         ApartmentsViewControl.DataContext = apartmentsViewModel;
@@ -45,10 +47,19 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(CancelEventArgs e)
     {
-        // Closing the window minimizes to the tray instead of exiting, so the background sync
-        // loop keeps running. Use the tray icon's "Exit" item (or File > Exit) to actually quit.
-        e.Cancel = true;
-        Hide();
+        // By default, closing the window minimizes to the tray instead of exiting, so the
+        // background sync loop keeps running. Use the tray icon's "Exit" item (or File > Exit) to
+        // quit, or turn off "Keep running in the background" in Settings to make the X button
+        // exit the app outright.
+        if (_settingsViewModel.RunInBackgroundWhenClosed)
+        {
+            e.Cancel = true;
+            Hide();
+        }
+        else
+        {
+            System.Windows.Application.Current.Shutdown();
+        }
     }
 
     private void ExitMenuItem_Click(object sender, RoutedEventArgs e) => System.Windows.Application.Current.Shutdown();

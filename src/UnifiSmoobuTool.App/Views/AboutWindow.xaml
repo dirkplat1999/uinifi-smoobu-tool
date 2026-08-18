@@ -11,11 +11,13 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="UniFi Access - Smoobu Guest Access Tool" FontSize="18" FontWeight="Bold"/>
+            <TextBlock x:Name="HeadingText" Text="UniFi Access - Smoobu Guest Access Tool" FontSize="18" FontWeight="Bold"/>
             <TextBlock x:Name="VersionText" Text="Version" Margin="0,2,0,0" Opacity="0.7"/>
             <TextBlock Text="Built by Dirk Plat" FontWeight="Bold" Margin="0,12,0,0"/>
             <TextBlock Text="Contact: dirkplat1999@gmail.com" Margin="0,2,0,0"/>
             <TextBlock Text="Repository: github.com/dirkplat1999/uinifi-smoobu-tool" Margin="0,2,0,0"/>
+            <TextBlock x:Name="AgreementPromptText" Text="Please read the license below. You need to accept it to use this application."
+                       Margin="0,12,0,0" FontWeight="SemiBold" Visibility="Collapsed" TextWrapping="Wrap"/>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,12">
@@ -32,6 +34,11 @@
             </TextBlock>
         </ScrollViewer>
 
-        <Button Grid.Row="2" Content="Close" Click="CloseButton_Click" Padding="16,4" HorizontalAlignment="Right"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="CloseButton" Content="Close" Click="CloseButton_Click" Padding="16,4"/>
+            <Button x:Name="DeclineButton" Content="I Decline" Click="DeclineButton_Click" Padding="16,4" Margin="0,0,8,0"
+                    Visibility="Collapsed" Background="{StaticResource TextSecondaryBrush}"/>
+            <Button x:Name="AgreeButton" Content="I Agree" Click="AgreeButton_Click" Padding="16,4" Visibility="Collapsed"/>
+        </StackPanel>
     </Grid>
 </Window>

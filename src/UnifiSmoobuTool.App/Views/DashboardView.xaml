@@ -24,6 +24,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Guest" Binding="{Binding GuestName}" Width="180"/>
                 <DataGridTextColumn Header="Apartment" Binding="{Binding ApartmentName}" Width="160"/>
+                <DataGridTextColumn Header="Language" Binding="{Binding Language}" Width="80"/>
                 <DataGridTextColumn Header="Arrival" Binding="{Binding Arrival}" Width="100"/>
                 <DataGridTextColumn Header="Departure" Binding="{Binding Departure}" Width="100"/>
                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="140">

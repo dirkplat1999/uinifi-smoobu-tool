@@ -101,29 +101,41 @@ public partial class App : System.Windows.Application
 
         _host.Start();
 
+        if (NeedsLicenseAgreement(appDataDir))
+        {
+            var about = new AboutWindow(requireAgreement: true);
+            about.ShowDialog();
+
+            if (!about.UserAgreed)
+            {
+                Log.Information("User declined the license agreement on first launch; exiting.");
+                _host.StopAsync(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();
+                _host.Dispose();
+                Log.CloseAndFlush();
+                System.Windows.Application.Current.Shutdown();
+                return;
+            }
+
+            RecordLicenseAgreed(appDataDir);
+        }
+
         SetupTrayIcon();
 
         var mainWindow = _host.Services.GetRequiredService<MainWindow>();
         MainWindow = mainWindow;
         mainWindow.Show();
-
-        if (IsFirstLaunch(appDataDir))
-        {
-            var about = new AboutWindow { Owner = mainWindow };
-            about.ShowDialog();
-        }
     }
 
-    private static bool IsFirstLaunch(string appDataDir)
+    private static bool NeedsLicenseAgreement(string appDataDir)
     {
-        var marker = Path.Combine(appDataDir, ".first-launch-shown");
-        if (File.Exists(marker))
-        {
-            return false;
-        }
+        var marker = Path.Combine(appDataDir, ".license-agreed");
+        return !File.Exists(marker);
+    }
 
+    private static void RecordLicenseAgreed(string appDataDir)
+    {
+        var marker = Path.Combine(appDataDir, ".license-agreed");
         File.WriteAllText(marker, DateTimeOffset.UtcNow.ToString("O"));
-        return true;
     }
 
     private void SetupTrayIcon()

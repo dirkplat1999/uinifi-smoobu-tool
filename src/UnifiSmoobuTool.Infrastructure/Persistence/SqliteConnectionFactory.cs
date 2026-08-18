@@ -35,6 +35,7 @@ public sealed class SqliteConnectionFactory
         // CREATE TABLE IF NOT EXISTS above only applies to brand-new databases; existing
         // databases from earlier versions need columns added explicitly.
         AddColumnIfMissing(connection, "app_settings", "smoobu_api_secret_protected", "BLOB NULL");
+        AddColumnIfMissing(connection, "app_settings", "run_in_background_when_closed", "INTEGER NOT NULL DEFAULT 1");
     }
 
     private static void AddColumnIfMissing(SqliteConnection connection, string table, string column, string columnDefinition)
@@ -88,7 +89,8 @@ public sealed class SqliteConnectionFactory
             smtp_username TEXT NULL,
             smtp_password_protected BLOB NULL,
             smtp_from_address TEXT NULL,
-            smtp_to_address TEXT NULL
+            smtp_to_address TEXT NULL,
+            run_in_background_when_closed INTEGER NOT NULL DEFAULT 1
         );
 
         CREATE TABLE IF NOT EXISTS message_templates (
