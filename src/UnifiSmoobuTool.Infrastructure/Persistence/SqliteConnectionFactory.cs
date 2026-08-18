@@ -26,9 +26,33 @@ public sealed class SqliteConnectionFactory
     public void EnsureSchema()
     {
         using var connection = CreateOpenConnection();
-        using var command = connection.CreateCommand();
-        command.CommandText = SchemaSql;
-        command.ExecuteNonQuery();
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = SchemaSql;
+            command.ExecuteNonQuery();
+        }
+
+        // CREATE TABLE IF NOT EXISTS above only applies to brand-new databases; existing
+        // databases from earlier versions need columns added explicitly.
+        AddColumnIfMissing(connection, "app_settings", "smoobu_api_secret_protected", "BLOB NULL");
+    }
+
+    private static void AddColumnIfMissing(SqliteConnection connection, string table, string column, string columnDefinition)
+    {
+        using (var checkCommand = connection.CreateCommand())
+        {
+            checkCommand.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = @column";
+            checkCommand.Parameters.AddWithValue("@column", column);
+            var exists = Convert.ToInt64(checkCommand.ExecuteScalar()) > 0;
+            if (exists)
+            {
+                return;
+            }
+        }
+
+        using var alterCommand = connection.CreateCommand();
+        alterCommand.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {columnDefinition}";
+        alterCommand.ExecuteNonQuery();
     }
 
     private const string SchemaSql = """
@@ -48,6 +72,7 @@ public sealed class SqliteConnectionFactory
         CREATE TABLE IF NOT EXISTS app_settings (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             smoobu_api_key_protected BLOB NULL,
+            smoobu_api_secret_protected BLOB NULL,
             unifi_access_host TEXT NULL,
             unifi_access_api_token_protected BLOB NULL,
             unifi_access_trust_any_ssl_cert INTEGER NOT NULL DEFAULT 1,

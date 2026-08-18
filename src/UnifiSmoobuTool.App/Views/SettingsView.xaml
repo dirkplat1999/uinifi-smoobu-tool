@@ -13,8 +13,10 @@
 
                 <GroupBox Header="Smoobu" Margin="0,0,0,12" Padding="8">
                     <StackPanel>
-                        <TextBlock Text="API key" Margin="0,0,0,2"/>
+                        <TextBlock Text="API key (label)" Margin="0,0,0,2"/>
                         <TextBox Text="{Binding SmoobuApiKey, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <TextBlock Text="API secret (leave empty if your account only has a legacy API key, no secret)" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                        <PasswordBox x:Name="SmoobuApiSecretBox" Margin="0,0,0,8" PasswordChanged="SmoobuApiSecretBox_PasswordChanged"/>
                     </StackPanel>
                 </GroupBox>
 

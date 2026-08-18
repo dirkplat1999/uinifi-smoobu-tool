@@ -10,6 +10,7 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
 {
     private const string SelectColumns = """
         smoobu_api_key_protected AS SmoobuApiKeyProtected,
+        smoobu_api_secret_protected AS SmoobuApiSecretProtected,
         unifi_access_host AS UnifiAccessHost,
         unifi_access_api_token_protected AS UnifiAccessApiTokenProtected,
         unifi_access_trust_any_ssl_cert AS UnifiAccessTrustAnySslCert,
@@ -64,6 +65,7 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
         return new AppSettings
         {
             SmoobuApiKey = _protector.Unprotect(row.SmoobuApiKeyProtected),
+            SmoobuApiSecret = _protector.Unprotect(row.SmoobuApiSecretProtected),
             UnifiAccessHost = row.UnifiAccessHost,
             UnifiAccessApiToken = _protector.Unprotect(row.UnifiAccessApiTokenProtected),
             UnifiAccessTrustAnySslCert = row.UnifiAccessTrustAnySslCert,
@@ -86,19 +88,20 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
         using var connection = _factory.CreateOpenConnection();
         await connection.ExecuteAsync("""
             INSERT INTO app_settings
-                (id, smoobu_api_key_protected, unifi_access_host, unifi_access_api_token_protected,
+                (id, smoobu_api_key_protected, smoobu_api_secret_protected, unifi_access_host, unifi_access_api_token_protected,
                  unifi_access_trust_any_ssl_cert, polling_interval_minutes, message_lead_days,
                  default_template_language, test_mode_enabled, auto_approve_parsed_replies,
                  license_plate_country_prefixes_json, smtp_host, smtp_port, smtp_use_ssl, smtp_username,
                  smtp_password_protected, smtp_from_address, smtp_to_address)
             VALUES
-                (1, @SmoobuApiKeyProtected, @UnifiAccessHost, @UnifiAccessApiTokenProtected,
+                (1, @SmoobuApiKeyProtected, @SmoobuApiSecretProtected, @UnifiAccessHost, @UnifiAccessApiTokenProtected,
                  @UnifiAccessTrustAnySslCert, @PollingIntervalMinutes, @MessageLeadDays,
                  @DefaultTemplateLanguage, @TestModeEnabled, @AutoApproveParsedReplies,
                  @LicensePlateCountryPrefixesJson, @SmtpHost, @SmtpPort, @SmtpUseSsl, @SmtpUsername,
                  @SmtpPasswordProtected, @SmtpFromAddress, @SmtpToAddress)
             ON CONFLICT(id) DO UPDATE SET
                 smoobu_api_key_protected = excluded.smoobu_api_key_protected,
+                smoobu_api_secret_protected = excluded.smoobu_api_secret_protected,
                 unifi_access_host = excluded.unifi_access_host,
                 unifi_access_api_token_protected = excluded.unifi_access_api_token_protected,
                 unifi_access_trust_any_ssl_cert = excluded.unifi_access_trust_any_ssl_cert,
@@ -119,6 +122,7 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
             new
             {
                 SmoobuApiKeyProtected = _protector.Protect(settings.SmoobuApiKey),
+                SmoobuApiSecretProtected = _protector.Protect(settings.SmoobuApiSecret),
                 settings.UnifiAccessHost,
                 UnifiAccessApiTokenProtected = _protector.Protect(settings.UnifiAccessApiToken),
                 settings.UnifiAccessTrustAnySslCert,
@@ -141,6 +145,7 @@ public sealed class SqliteAppSettingsStore : IAppSettingsStore
     private sealed class SettingsRow
     {
         public byte[]? SmoobuApiKeyProtected { get; set; }
+        public byte[]? SmoobuApiSecretProtected { get; set; }
         public string? UnifiAccessHost { get; set; }
         public byte[]? UnifiAccessApiTokenProtected { get; set; }
         public bool UnifiAccessTrustAnySslCert { get; set; }

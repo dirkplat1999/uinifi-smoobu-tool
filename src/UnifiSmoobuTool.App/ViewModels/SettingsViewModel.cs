@@ -40,6 +40,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string _smoobuApiKey = "";
 
     [ObservableProperty]
+    private string _smoobuApiSecret = "";
+
+    [ObservableProperty]
     private string _unifiAccessHost = "";
 
     [ObservableProperty]
@@ -110,6 +113,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             var settings = await _settingsStore.GetAsync();
             SmoobuApiKey = settings.SmoobuApiKey ?? "";
+            SmoobuApiSecret = settings.SmoobuApiSecret ?? "";
             UnifiAccessHost = settings.UnifiAccessHost ?? "";
             UnifiAccessApiToken = settings.UnifiAccessApiToken ?? "";
             UnifiAccessTrustAnySslCert = settings.UnifiAccessTrustAnySslCert;
@@ -163,6 +167,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             var settings = await _settingsStore.GetAsync();
             settings.SmoobuApiKey = string.IsNullOrWhiteSpace(SmoobuApiKey) ? null : SmoobuApiKey.Trim();
+            settings.SmoobuApiSecret = string.IsNullOrWhiteSpace(SmoobuApiSecret) ? null : SmoobuApiSecret.Trim();
             settings.UnifiAccessHost = string.IsNullOrWhiteSpace(UnifiAccessHost) ? null : UnifiAccessHost.Trim();
             settings.UnifiAccessApiToken = string.IsNullOrWhiteSpace(UnifiAccessApiToken) ? null : UnifiAccessApiToken.Trim();
             settings.UnifiAccessTrustAnySslCert = UnifiAccessTrustAnySslCert;

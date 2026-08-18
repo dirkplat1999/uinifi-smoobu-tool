@@ -4,6 +4,11 @@ public sealed class AppSettings
 {
     public string? SmoobuApiKey { get; set; }
 
+    /// <summary>The HMAC signing secret paired with <see cref="SmoobuApiKey"/>. When present, the
+    /// client signs every request (X-API-Key/X-Timestamp/X-Nonce/X-Signature). When absent, it
+    /// falls back to Smoobu's legacy single "Api-Key" header scheme.</summary>
+    public string? SmoobuApiSecret { get; set; }
+
     /// <summary>e.g. https://192.168.1.1:12445</summary>
     public string? UnifiAccessHost { get; set; }
 

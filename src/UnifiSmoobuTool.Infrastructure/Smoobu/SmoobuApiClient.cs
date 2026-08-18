@@ -8,9 +8,11 @@ using UnifiSmoobuTool.Core.Models;
 namespace UnifiSmoobuTool.Infrastructure.Smoobu;
 
 /// <summary>
-/// Typed client for the Smoobu REST API (https://login.smoobu.com), using the legacy single
-/// "Api-Key" header. The API key is re-read from settings on every call so a key change in the
-/// Settings screen takes effect without restarting the background sync loop.
+/// Typed client for the Smoobu REST API (https://login.smoobu.com). Supports both of Smoobu's
+/// authentication schemes: HMAC-SHA256 request signing (API key + secret - the current scheme)
+/// when a secret is configured, falling back to the legacy single "Api-Key" header (deprecated,
+/// sunsetting 2026-09-25) when only a key is present. Settings are re-read on every call so a
+/// change in the Settings screen takes effect without restarting the background sync loop.
 /// </summary>
 public sealed class SmoobuApiClient : ISmoobuClient
 {
@@ -31,7 +33,7 @@ public sealed class SmoobuApiClient : ISmoobuClient
 
     public async Task<IReadOnlyList<Apartment>> GetApartmentsAsync(CancellationToken ct = default)
     {
-        var dto = await GetAsync<SmoobuApartmentListDto>("/api/apartments", ct).ConfigureAwait(false);
+        var dto = await GetAsync<SmoobuApartmentListDto>("/api/apartments", null, ct).ConfigureAwait(false);
         return (dto?.Apartments ?? new List<SmoobuApartmentDto>())
             .Select(a => new Apartment { Id = a.Id, Name = string.IsNullOrWhiteSpace(a.Name) ? $"Apartment {a.Id}" : a.Name })
             .ToList();
@@ -45,8 +47,16 @@ public sealed class SmoobuApiClient : ISmoobuClient
 
         do
         {
-            var path = $"/api/reservations?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&showCancellation=1&pageSize=100&page={page}";
-            var dto = await GetAsync<SmoobuReservationListDto>(path, ct).ConfigureAwait(false);
+            var queryParams = new Dictionary<string, string>
+            {
+                ["from"] = from.ToString("yyyy-MM-dd"),
+                ["to"] = to.ToString("yyyy-MM-dd"),
+                ["showCancellation"] = "1",
+                ["pageSize"] = "100",
+                ["page"] = page.ToString(),
+            };
+
+            var dto = await GetAsync<SmoobuReservationListDto>("/api/reservations", queryParams, ct).ConfigureAwait(false);
             if (dto?.Bookings is not null)
             {
                 results.AddRange(dto.Bookings.Select(ToReservation));
@@ -63,13 +73,13 @@ public sealed class SmoobuApiClient : ISmoobuClient
 
     public async Task<Reservation?> GetReservationAsync(long reservationId, CancellationToken ct = default)
     {
-        var dto = await GetAsync<SmoobuReservationDto>($"/api/reservations/{reservationId}", ct).ConfigureAwait(false);
+        var dto = await GetAsync<SmoobuReservationDto>($"/api/reservations/{reservationId}", null, ct).ConfigureAwait(false);
         return dto is null ? null : ToReservation(dto);
     }
 
     public async Task<IReadOnlyList<GuestMessage>> GetMessagesAsync(long reservationId, CancellationToken ct = default)
     {
-        var dto = await GetAsync<SmoobuMessageListDto>($"/api/reservations/{reservationId}/messages", ct).ConfigureAwait(false);
+        var dto = await GetAsync<SmoobuMessageListDto>($"/api/reservations/{reservationId}/messages", null, ct).ConfigureAwait(false);
         return (dto?.Messages ?? new List<SmoobuMessageDto>())
             .Select(m => new GuestMessage
             {
@@ -86,8 +96,9 @@ public sealed class SmoobuApiClient : ISmoobuClient
     public async Task SendMessageToGuestAsync(long reservationId, string message, CancellationToken ct = default)
     {
         var body = JsonSerializer.Serialize(new SmoobuSendMessageRequestDto { Message = message }, JsonOptions);
-        using var request = await CreateRequestAsync(
-            HttpMethod.Post, $"/api/reservations/{reservationId}/messages/send-message-to-guest", ct).ConfigureAwait(false);
+        var path = $"/api/reservations/{reservationId}/messages/send-message-to-guest";
+
+        using var request = await CreateRequestAsync(HttpMethod.Post, path, null, body, ct).ConfigureAwait(false);
         request.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
         using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
@@ -124,9 +135,9 @@ public sealed class SmoobuApiClient : ISmoobuClient
         };
     }
 
-    private async Task<T?> GetAsync<T>(string path, CancellationToken ct)
+    private async Task<T?> GetAsync<T>(string path, IReadOnlyDictionary<string, string>? queryParams, CancellationToken ct)
     {
-        using var request = await CreateRequestAsync(HttpMethod.Get, path, ct).ConfigureAwait(false);
+        using var request = await CreateRequestAsync(HttpMethod.Get, path, queryParams, null, ct).ConfigureAwait(false);
         using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
         await EnsureSuccessAsync(response, ct).ConfigureAwait(false);
 
@@ -134,7 +145,8 @@ public sealed class SmoobuApiClient : ISmoobuClient
         return await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions, ct).ConfigureAwait(false);
     }
 
-    private async Task<HttpRequestMessage> CreateRequestAsync(HttpMethod method, string path, CancellationToken ct)
+    private async Task<HttpRequestMessage> CreateRequestAsync(
+        HttpMethod method, string path, IReadOnlyDictionary<string, string>? queryParams, string? body, CancellationToken ct)
     {
         var settings = await _settingsStore.GetAsync(ct).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(settings.SmoobuApiKey))
@@ -142,10 +154,37 @@ public sealed class SmoobuApiClient : ISmoobuClient
             throw new SmoobuApiException("No Smoobu API key is configured.");
         }
 
-        var request = new HttpRequestMessage(method, path);
-        request.Headers.TryAddWithoutValidation("Api-Key", settings.SmoobuApiKey);
+        var requestUri = BuildRequestUri(path, queryParams);
+        var request = new HttpRequestMessage(method, requestUri);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        if (!string.IsNullOrWhiteSpace(settings.SmoobuApiSecret))
+        {
+            var signed = SmoobuHmacSigner.Sign(
+                method.Method, path, queryParams, body ?? string.Empty, settings.SmoobuApiKey, settings.SmoobuApiSecret);
+
+            request.Headers.TryAddWithoutValidation("X-API-Key", settings.SmoobuApiKey);
+            request.Headers.TryAddWithoutValidation("X-Timestamp", signed.Timestamp);
+            request.Headers.TryAddWithoutValidation("X-Nonce", signed.Nonce);
+            request.Headers.TryAddWithoutValidation("X-Signature", signed.Signature);
+        }
+        else
+        {
+            request.Headers.TryAddWithoutValidation("Api-Key", settings.SmoobuApiKey);
+        }
+
         return request;
+    }
+
+    private static string BuildRequestUri(string path, IReadOnlyDictionary<string, string>? queryParams)
+    {
+        if (queryParams is null || queryParams.Count == 0)
+        {
+            return path;
+        }
+
+        var query = string.Join("&", queryParams.Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
+        return $"{path}?{query}";
     }
 
     private async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)

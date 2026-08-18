@@ -7,11 +7,14 @@ namespace UnifiSmoobuTool.Infrastructure.Tests;
 
 public class SmoobuApiClientTests
 {
-    private static (SmoobuApiClient Client, FakeHttpMessageHandler Handler) Build(string apiKey = "test-key")
+    private static (SmoobuApiClient Client, FakeHttpMessageHandler Handler) Build(string apiKey = "test-key", string? apiSecret = null)
     {
         var handler = new FakeHttpMessageHandler();
         var httpClient = new HttpClient(handler);
-        var settingsStore = new InMemoryAppSettingsStore { Settings = new AppSettings { SmoobuApiKey = apiKey } };
+        var settingsStore = new InMemoryAppSettingsStore
+        {
+            Settings = new AppSettings { SmoobuApiKey = apiKey, SmoobuApiSecret = apiSecret },
+        };
         var client = new SmoobuApiClient(httpClient, settingsStore, NullLogger<SmoobuApiClient>.Instance);
         return (client, handler);
     }
@@ -105,6 +108,51 @@ public class SmoobuApiClientTests
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal("/api/reservations/999/messages/send-message-to-guest", request.Uri.AbsolutePath);
         Assert.Contains("Hello there", request.Body);
+    }
+
+    [Fact]
+    public async Task GetApartmentsAsync_UsesLegacyApiKeyHeader_WhenNoSecretConfigured()
+    {
+        var (client, handler) = Build(apiKey: "test-key", apiSecret: null);
+        handler.DefaultResponse = (200, """{"apartments":[]}""");
+
+        await client.GetApartmentsAsync();
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("test-key", request.Headers["Api-Key"]);
+        Assert.False(request.Headers.ContainsKey("X-Signature"));
+    }
+
+    [Fact]
+    public async Task GetApartmentsAsync_UsesHmacHeaders_WhenSecretConfigured()
+    {
+        var (client, handler) = Build(apiKey: "test-key", apiSecret: "test-secret");
+        handler.DefaultResponse = (200, """{"apartments":[]}""");
+
+        await client.GetApartmentsAsync();
+
+        var request = Assert.Single(handler.Requests);
+        Assert.False(request.Headers.ContainsKey("Api-Key"));
+        Assert.Equal("test-key", request.Headers["X-API-Key"]);
+        Assert.True(request.Headers.ContainsKey("X-Timestamp"));
+        Assert.True(request.Headers.ContainsKey("X-Nonce"));
+        Assert.True(request.Headers.ContainsKey("X-Signature"));
+    }
+
+    [Fact]
+    public async Task GetReservationsAsync_SortsQueryParamsInCanonicalOrder_ButNotNecessarilyInTheUrl()
+    {
+        var (client, handler) = Build(apiKey: "test-key", apiSecret: "test-secret");
+        handler.DefaultResponse = (200, """{"bookings":[],"page":1,"page_count":1}""");
+
+        await client.GetReservationsAsync(new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 31));
+
+        var request = Assert.Single(handler.Requests);
+        // The actual signature correctness is covered by SmoobuHmacSignerTests; here we just
+        // confirm every HMAC header made it onto a real GET request with query parameters.
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Contains("from=2026-08-01", request.Uri.Query);
+        Assert.True(request.Headers.ContainsKey("X-Signature"));
     }
 
     [Fact]

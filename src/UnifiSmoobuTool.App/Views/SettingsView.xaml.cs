@@ -28,11 +28,16 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         };
     }
 
-    // PasswordBox.Password is intentionally not a bindable DependencyProperty (security), so it's
-    // kept in sync with the view model manually in both directions.
+    // PasswordBox.Password is intentionally not a bindable DependencyProperty (security), so both
+    // secret boxes are kept in sync with the view model manually in both directions.
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SettingsViewModel.SmtpPassword) && sender is SettingsViewModel vm)
+        if (sender is not SettingsViewModel vm)
+        {
+            return;
+        }
+
+        if (e.PropertyName is nameof(SettingsViewModel.SmtpPassword) or nameof(SettingsViewModel.SmoobuApiSecret))
         {
             SyncPasswordBoxFromViewModel(vm);
         }
@@ -40,13 +45,18 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
     private void SyncPasswordBoxFromViewModel(SettingsViewModel vm)
     {
-        if (SmtpPasswordBox.Password == vm.SmtpPassword)
+        _suppressPasswordSync = true;
+
+        if (SmtpPasswordBox.Password != vm.SmtpPassword)
         {
-            return;
+            SmtpPasswordBox.Password = vm.SmtpPassword;
         }
 
-        _suppressPasswordSync = true;
-        SmtpPasswordBox.Password = vm.SmtpPassword;
+        if (SmoobuApiSecretBox.Password != vm.SmoobuApiSecret)
+        {
+            SmoobuApiSecretBox.Password = vm.SmoobuApiSecret;
+        }
+
         _suppressPasswordSync = false;
     }
 
@@ -60,6 +70,19 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         if (DataContext is SettingsViewModel vm)
         {
             vm.SmtpPassword = SmtpPasswordBox.Password;
+        }
+    }
+
+    private void SmoobuApiSecretBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (_suppressPasswordSync)
+        {
+            return;
+        }
+
+        if (DataContext is SettingsViewModel vm)
+        {
+            vm.SmoobuApiSecret = SmoobuApiSecretBox.Password;
         }
     }
 }

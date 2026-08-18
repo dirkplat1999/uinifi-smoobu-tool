@@ -25,4 +25,8 @@
     <ProjectReference Include="..\UnifiSmoobuTool.Core\UnifiSmoobuTool.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="UnifiSmoobuTool.Infrastructure.Tests" />
+  </ItemGroup>
+
 </Project>

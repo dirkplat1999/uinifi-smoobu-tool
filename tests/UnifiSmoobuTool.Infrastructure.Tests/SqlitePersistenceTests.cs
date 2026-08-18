@@ -77,6 +77,7 @@ public class SqlitePersistenceTests : IDisposable
         var settings = new AppSettings
         {
             SmoobuApiKey = "smoobu-secret",
+            SmoobuApiSecret = "smoobu-hmac-secret",
             UnifiAccessHost = "https://192.168.1.1:12445",
             UnifiAccessApiToken = "unifi-secret",
             PollingIntervalMinutes = 15,
@@ -88,6 +89,7 @@ public class SqlitePersistenceTests : IDisposable
         var loaded = await store.GetAsync();
 
         Assert.Equal("smoobu-secret", loaded.SmoobuApiKey);
+        Assert.Equal("smoobu-hmac-secret", loaded.SmoobuApiSecret);
         Assert.Equal("unifi-secret", loaded.UnifiAccessApiToken);
         Assert.Equal(15, loaded.PollingIntervalMinutes);
         Assert.Equal(new[] { "NL", "D" }, loaded.LicensePlateCountryPrefixes);
