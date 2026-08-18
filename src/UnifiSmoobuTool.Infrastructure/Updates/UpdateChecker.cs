@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using Microsoft.Extensions.Logging;
 using Velopack;
 using Velopack.Sources;
@@ -37,8 +38,25 @@ public sealed class UpdateChecker
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Update check failed.");
-            return UpdateCheckResult.Failed(ex.Message);
+            return UpdateCheckResult.Failed(DescribeError(ex));
         }
+    }
+
+    /// <summary>Turns raw HTTP/GitHub exceptions into a message that explains what's actually going
+    /// on instead of the raw status text - most commonly GitHub's 60-requests/hour limit for
+    /// unauthenticated API calls, which is shared per network/IP address and can already be used up
+    /// by unrelated traffic on a busy or shared connection (office Wi-Fi, VPN, mobile network).</summary>
+    private static string DescribeError(Exception ex)
+    {
+        if (ex is HttpRequestException { StatusCode: HttpStatusCode.Forbidden } ||
+            ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
+        {
+            return "GitHub's update-check limit was reached for this network (it allows a limited " +
+                   "number of unauthenticated requests per hour, shared by everyone on the same " +
+                   "connection). This is temporary - please try again in a few minutes.";
+        }
+
+        return ex.Message;
     }
 
     /// <summary>Downloads and applies the update, then restarts the app. Never returns on success.</summary>
