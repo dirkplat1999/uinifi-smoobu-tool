@@ -15,6 +15,12 @@
                 <MenuItem Header="_About / License" Click="AboutMenuItem_Click"/>
             </MenuItem>
         </Menu>
+        <Border DockPanel.Dock="Top" Background="{StaticResource PrimaryBrush}" Padding="18,12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="UniFi Access" Foreground="White" FontSize="17" FontWeight="SemiBold"/>
+                <TextBlock Text=" · Smoobu Guest Access Tool" Foreground="{StaticResource PrimaryLightBrush}" FontSize="17"/>
+            </StackPanel>
+        </Border>
         <TabControl Margin="8">
             <TabItem Header="Dashboard">
                 <views:DashboardView x:Name="DashboardViewControl"/>

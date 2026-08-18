@@ -26,7 +26,14 @@
                 <DataGridTextColumn Header="Apartment" Binding="{Binding ApartmentName}" Width="160"/>
                 <DataGridTextColumn Header="Arrival" Binding="{Binding Arrival}" Width="100"/>
                 <DataGridTextColumn Header="Departure" Binding="{Binding Departure}" Width="100"/>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="140"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="140">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding Status, Converter={StaticResource StatusToBrush}}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
         </DataGrid>
 
