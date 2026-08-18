@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:UnifiSmoobuTool.App.Views"
         Title="UniFi Access - Smoobu Guest Access Tool" Height="760" Width="1150"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen" Icon="/Resources/app.ico">
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
@@ -20,7 +20,7 @@
         <Border DockPanel.Dock="Top" Background="{StaticResource PrimaryBrush}" Padding="18,12">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="UniFi Access" Foreground="White" FontSize="17" FontWeight="SemiBold"/>
-                <TextBlock Text=" · Smoobu Guest Access Tool" Foreground="{StaticResource PrimaryLightBrush}" FontSize="17"/>
+                <TextBlock Text=" · Smoobu Guest Access Tool" Foreground="White" FontSize="17"/>
             </StackPanel>
         </Border>
         <TabControl Margin="8">

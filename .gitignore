@@ -21,6 +21,11 @@ appsettings.Local.json
 .idea/
 .vscode/
 
+## Claude Code agent skills installed locally (not part of this project)
+.agents/
+.claude/
+skills-lock.json
+
 ## OS
 Thumbs.db
 Desktop.ini

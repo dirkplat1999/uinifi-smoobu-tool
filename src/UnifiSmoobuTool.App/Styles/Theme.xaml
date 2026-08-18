@@ -9,10 +9,12 @@
     <Color x:Key="SurfaceColor">#FFFFFF</Color>
     <Color x:Key="BorderColor">#D8DCE3</Color>
     <Color x:Key="TextPrimaryColor">#1F2430</Color>
-    <Color x:Key="TextSecondaryColor">#6B7280</Color>
-    <Color x:Key="SuccessColor">#1E8E5A</Color>
-    <Color x:Key="WarningColor">#B7791F</Color>
-    <Color x:Key="ErrorColor">#D64545</Color>
+    <!-- Colors below are tuned to clear 4.5:1 contrast (WCAG AA, normal text) against both
+         SurfaceColor and BackgroundColor - see ui-ux-pro-max accessibility check. -->
+    <Color x:Key="TextSecondaryColor">#686F7D</Color>
+    <Color x:Key="SuccessColor">#1A7F50</Color>
+    <Color x:Key="WarningColor">#99651A</Color>
+    <Color x:Key="ErrorColor">#C94040</Color>
 
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
     <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDarkColor}"/>
@@ -46,7 +48,11 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4">
+                    <!-- BorderThickness stays constant so the visible focus ring (added for
+                         keyboard accessibility - see ui-ux-pro-max WPF accessibility check)
+                         doesn't shift layout when it appears. -->
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4"
+                            BorderBrush="Transparent" BorderThickness="2">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                           Margin="{TemplateBinding Padding}"/>
                     </Border>
@@ -56,6 +62,9 @@
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Opacity" Value="0.85"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="White"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource BorderBrush}"/>
@@ -187,6 +196,9 @@
                             <Setter TargetName="contentPresenter" Property="TextElement.FontWeight" Value="SemiBold"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>

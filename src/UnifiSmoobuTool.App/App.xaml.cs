@@ -128,9 +128,12 @@ public partial class App : System.Windows.Application
 
     private void SetupTrayIcon()
     {
+        var appIcon = System.Drawing.Icon.ExtractAssociatedIcon(System.Reflection.Assembly.GetExecutingAssembly().Location)
+            ?? System.Drawing.SystemIcons.Application;
+
         _trayIcon = new System.Windows.Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = appIcon,
             Visible = true,
             Text = "UniFi Smoobu Tool",
         };
