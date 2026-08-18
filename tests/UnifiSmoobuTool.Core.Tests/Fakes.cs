@@ -126,14 +126,14 @@ internal sealed class InMemoryMessageTemplateStore : IMessageTemplateStore
 
     public Task SaveAsync(MessageTemplate template, CancellationToken ct = default)
     {
-        Templates.RemoveAll(t => t.LanguageCode == template.LanguageCode);
+        Templates.RemoveAll(t => t.LanguageCode == template.LanguageCode && t.Kind == template.Kind);
         Templates.Add(template);
         return Task.CompletedTask;
     }
 
-    public Task DeleteAsync(string languageCode, CancellationToken ct = default)
+    public Task DeleteAsync(string languageCode, MessageTemplateKind kind, CancellationToken ct = default)
     {
-        Templates.RemoveAll(t => t.LanguageCode == languageCode);
+        Templates.RemoveAll(t => t.LanguageCode == languageCode && t.Kind == kind);
         return Task.CompletedTask;
     }
 }

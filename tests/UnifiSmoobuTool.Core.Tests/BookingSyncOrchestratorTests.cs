@@ -29,7 +29,20 @@ public class BookingSyncOrchestratorTests
             Templates.Templates.Add(new MessageTemplate
             {
                 LanguageCode = "en",
+                Kind = MessageTemplateKind.Request,
                 Body = "Hi {{guest_first_name}}, please reply with your license plate and a 4-digit PIN.",
+            });
+            Templates.Templates.Add(new MessageTemplate
+            {
+                LanguageCode = "en",
+                Kind = MessageTemplateKind.Clarification,
+                Body = "Hi {{guest_first_name}}, we couldn't read that - could you resend your plate and PIN clearly?",
+            });
+            Templates.Templates.Add(new MessageTemplate
+            {
+                LanguageCode = "en",
+                Kind = MessageTemplateKind.Confirmation,
+                Body = "Thanks {{guest_first_name}}, got it!",
             });
         }
 
@@ -124,6 +137,10 @@ public class BookingSyncOrchestratorTests
         var state = await h.States.GetAsync(1);
         Assert.NotNull(state!.AccessCreatedAt);
         Assert.False(state.NeedsManualReview);
+
+        Assert.Equal(2, h.Smoobu.SentMessages.Count);
+        Assert.Contains(h.Smoobu.SentMessages, m => m.Message.Contains("Thanks", StringComparison.Ordinal));
+        Assert.NotNull(state.ConfirmationSentAt);
     }
 
     [Fact]
@@ -150,6 +167,58 @@ public class BookingSyncOrchestratorTests
         Assert.Empty(h.Unifi.Visitors);
         var state = await h.States.GetAsync(1);
         Assert.True(state!.NeedsManualReview);
+
+        Assert.Equal(2, h.Smoobu.SentMessages.Count);
+        Assert.Contains(h.Smoobu.SentMessages, m => m.Message.Contains("couldn't read", StringComparison.Ordinal));
+        Assert.NotNull(state.ClarificationRequestedAt);
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_ResolvesAfterClarification_WhenFollowUpReplyIsClear()
+    {
+        var h = new Harness();
+        var today = DateOnly.FromDateTime(h.Clock.UtcNow.UtcDateTime);
+        var arrival = today.AddDays(3);
+        var departure = today.AddDays(6);
+        h.Smoobu.Reservations.Add(MakeReservation(1, arrival, departure));
+        h.Mappings.Mappings.Add(new ApartmentAccessMapping { SmoobuApartmentId = 1, ApartmentName = "Canal View" });
+
+        var orchestrator = h.BuildOrchestrator();
+        await orchestrator.RunOnceAsync();
+
+        h.Smoobu.Messages.Add(new GuestMessage
+        {
+            ReservationId = 1,
+            Text = "we'll send it later",
+            SentAt = h.Clock.UtcNow.AddMinutes(5),
+            Direction = MessageDirection.GuestToHost,
+        });
+        h.Clock.UtcNow = h.Clock.UtcNow.AddMinutes(10);
+        await orchestrator.RunOnceAsync();
+
+        var stateAfterClarification = await h.States.GetAsync(1);
+        Assert.True(stateAfterClarification!.NeedsManualReview);
+        Assert.NotNull(stateAfterClarification.ClarificationRequestedAt);
+
+        h.Smoobu.Messages.Add(new GuestMessage
+        {
+            ReservationId = 1,
+            Text = "Sorry! Plate AB-123-C, PIN 4821",
+            SentAt = h.Clock.UtcNow.AddMinutes(5),
+            Direction = MessageDirection.GuestToHost,
+        });
+        h.Clock.UtcNow = h.Clock.UtcNow.AddMinutes(10);
+        await orchestrator.RunOnceAsync();
+
+        var visitor = Assert.Single(h.Unifi.Visitors);
+        Assert.Equal("4821", visitor.PinCode);
+        var state = await h.States.GetAsync(1);
+        Assert.False(state!.NeedsManualReview);
+        Assert.NotNull(state.AccessCreatedAt);
+        Assert.NotNull(state.ConfirmationSentAt);
+
+        // Request, Clarification, Confirmation - no duplicate clarifications sent.
+        Assert.Equal(3, h.Smoobu.SentMessages.Count);
     }
 
     [Fact]

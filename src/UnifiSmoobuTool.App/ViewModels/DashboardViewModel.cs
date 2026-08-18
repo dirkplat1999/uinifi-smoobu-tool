@@ -26,6 +26,8 @@ public sealed class ReservationRowViewModel
             if (State is null) return "Pending";
             if (State.AccessRevokedAt is not null) return "Access revoked";
             if (State.AccessCreatedAt is not null) return "Access granted";
+            if (State.NeedsManualReview && State.ClarificationRequestedAt is not null && State.GuestReplyReceivedAt < State.ClarificationRequestedAt)
+                return "Awaiting guest clarification";
             if (State.NeedsManualReview) return "Needs review";
             if (State.GuestReplyReceivedAt is not null) return "Reply received";
             if (State.RequestMessageSentAt is not null) return "Message sent";

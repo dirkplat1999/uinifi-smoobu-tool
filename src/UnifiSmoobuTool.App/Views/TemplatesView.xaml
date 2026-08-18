@@ -13,18 +13,22 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.1*"/>
+                <ColumnDefinition Width="1.3*"/>
                 <ColumnDefinition Width="12"/>
                 <ColumnDefinition Width="2*"/>
             </Grid.ColumnDefinitions>
 
             <DockPanel Grid.Column="0">
-                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBox Text="{Binding NewLanguageCode, UpdateSourceTrigger=PropertyChanged}" Width="80" Margin="0,0,8,0"
-                             ToolTip="Language code, e.g. en, nl, de"/>
-                    <Button Content="Add language" Command="{Binding AddCommand}" Padding="10,4"/>
+                <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <ComboBox ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding NewLanguage}" Width="120" Margin="0,0,4,0"/>
+                        <ComboBox ItemsSource="{Binding KindOptions}" SelectedItem="{Binding NewKind}" Width="110"/>
+                    </StackPanel>
+                    <TextBox Text="{Binding NewCustomLanguageCode, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"
+                             ToolTip="Only used when &quot;Custom...&quot; is selected above, e.g. es, it, pl"/>
+                    <Button Content="Add template" Command="{Binding AddCommand}" Padding="10,4" HorizontalAlignment="Left"/>
                 </StackPanel>
-                <ListBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" DisplayMemberPath="LanguageCode"/>
+                <ListBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" DisplayMemberPath="DisplayName"/>
             </DockPanel>
 
             <DockPanel Grid.Column="2">

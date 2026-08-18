@@ -15,6 +15,14 @@ public sealed class ReservationProcessingState
     public string? ParsedPinCode { get; set; }
     public bool NeedsManualReview { get; set; }
 
+    /// <summary>Set when a clarification message was auto-sent because the guest's reply couldn't
+    /// be confidently read. Gates a single automatic re-check of a follow-up reply.</summary>
+    public DateTimeOffset? ClarificationRequestedAt { get; set; }
+
+    /// <summary>Set when a confirmation/thank-you message was auto-sent because the guest's reply
+    /// was read clearly.</summary>
+    public DateTimeOffset? ConfirmationSentAt { get; set; }
+
     public DateTimeOffset? AccessCreatedAt { get; set; }
     public string? UnifiVisitorId { get; set; }
 

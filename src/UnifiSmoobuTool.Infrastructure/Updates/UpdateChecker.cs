@@ -33,7 +33,9 @@ public sealed class UpdateChecker
             var updateInfo = await manager.CheckForUpdatesAsync().ConfigureAwait(false);
             return updateInfo is null
                 ? UpdateCheckResult.UpToDate()
-                : UpdateCheckResult.UpdateAvailable(updateInfo.TargetFullRelease.Version.ToString());
+                : UpdateCheckResult.UpdateAvailable(
+                    updateInfo.TargetFullRelease.Version.ToString(),
+                    updateInfo.TargetFullRelease.NotesMarkdown);
         }
         catch (Exception ex)
         {
@@ -116,11 +118,12 @@ public sealed record UninstallResult(bool Started, string? Error)
     public static UninstallResult Failure(string error) => new(false, error);
 }
 
-public sealed record UpdateCheckResult(UpdateCheckStatus Status, string? Detail)
+public sealed record UpdateCheckResult(UpdateCheckStatus Status, string? Detail, string? ReleaseNotes = null)
 {
     public static UpdateCheckResult NotInstalled() => new(UpdateCheckStatus.NotInstalled, null);
     public static UpdateCheckResult UpToDate() => new(UpdateCheckStatus.UpToDate, null);
-    public static UpdateCheckResult UpdateAvailable(string version) => new(UpdateCheckStatus.UpdateAvailable, version);
+    public static UpdateCheckResult UpdateAvailable(string version, string? releaseNotes = null) =>
+        new(UpdateCheckStatus.UpdateAvailable, version, releaseNotes);
     public static UpdateCheckResult Failed(string error) => new(UpdateCheckStatus.Failed, error);
 }
 

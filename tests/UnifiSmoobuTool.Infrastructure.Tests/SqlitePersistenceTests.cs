@@ -42,6 +42,8 @@ public class SqlitePersistenceTests : IDisposable
             UnifiVisitorId = "visitor-1",
             AccessRevokedAt = null,
             ArrivalDayNotifiedAt = null,
+            ClarificationRequestedAt = new DateTimeOffset(2026, 8, 17, 10, 30, 0, TimeSpan.Zero),
+            ConfirmationSentAt = null,
         };
 
         await store.SaveAsync(state);
@@ -53,6 +55,8 @@ public class SqlitePersistenceTests : IDisposable
         Assert.Equal(state.ParsedLicensePlate, loaded.ParsedLicensePlate);
         Assert.True(loaded.NeedsManualReview);
         Assert.Equal("visitor-1", loaded.UnifiVisitorId);
+        Assert.Equal(state.ClarificationRequestedAt, loaded.ClarificationRequestedAt);
+        Assert.Null(loaded.ConfirmationSentAt);
 
         var pendingReview = await store.GetAllNeedingManualReviewAsync();
         Assert.Contains(pendingReview, s => s.ReservationId == 42);
@@ -81,6 +85,7 @@ public class SqlitePersistenceTests : IDisposable
             UnifiAccessHost = "https://192.168.1.1:12445",
             UnifiAccessApiToken = "unifi-secret",
             PollingIntervalMinutes = 15,
+            GuestMessagingEnabled = false,
             LicensePlateCountryPrefixes = new List<string> { "NL", "D" },
             Smtp = new SmtpSettings { Host = "smtp.example.com", Username = "user", Password = "smtp-secret", FromAddress = "a@b.com", ToAddress = "c@d.com" },
         };
@@ -92,6 +97,7 @@ public class SqlitePersistenceTests : IDisposable
         Assert.Equal("smoobu-hmac-secret", loaded.SmoobuApiSecret);
         Assert.Equal("unifi-secret", loaded.UnifiAccessApiToken);
         Assert.Equal(15, loaded.PollingIntervalMinutes);
+        Assert.False(loaded.GuestMessagingEnabled);
         Assert.Equal(new[] { "NL", "D" }, loaded.LicensePlateCountryPrefixes);
         Assert.NotNull(loaded.Smtp);
         Assert.Equal("smtp-secret", loaded.Smtp!.Password);
@@ -106,16 +112,45 @@ public class SqlitePersistenceTests : IDisposable
     }
 
     [Fact]
-    public async Task MessageTemplateStore_UpsertsByLanguage()
+    public async Task MessageTemplateStore_UpsertsByLanguageAndKind()
     {
         var store = new SqliteMessageTemplateStore(_factory);
         await store.SaveAsync(new MessageTemplate { LanguageCode = "en", Body = "Hello" });
         await store.SaveAsync(new MessageTemplate { LanguageCode = "en", Body = "Hi there" });
+        await store.SaveAsync(new MessageTemplate { LanguageCode = "en", Kind = MessageTemplateKind.Confirmation, Body = "Thanks" });
         await store.SaveAsync(new MessageTemplate { LanguageCode = "nl", Body = "Hallo" });
 
         var all = await store.GetAllAsync();
-        Assert.Equal(2, all.Count);
-        Assert.Equal("Hi there", all.Single(t => t.LanguageCode == "en").Body);
+        Assert.Equal(3, all.Count);
+        Assert.Equal("Hi there", all.Single(t => t.LanguageCode == "en" && t.Kind == MessageTemplateKind.Request).Body);
+        Assert.Equal("Thanks", all.Single(t => t.LanguageCode == "en" && t.Kind == MessageTemplateKind.Confirmation).Body);
+
+        await store.DeleteAsync("en", MessageTemplateKind.Confirmation);
+        Assert.Equal(2, (await store.GetAllAsync()).Count);
+    }
+
+    [Fact]
+    public async Task SeedDefaultTemplatesIfEmpty_SeedsFourLanguagesAndThreeKinds_OnlyWhenEmpty()
+    {
+        var store = new SqliteMessageTemplateStore(_factory);
+
+        _factory.SeedDefaultTemplatesIfEmpty();
+        var seeded = await store.GetAllAsync();
+        Assert.Equal(12, seeded.Count);
+        foreach (var lang in new[] { "en", "nl", "de", "fr" })
+        {
+            foreach (var kind in Enum.GetValues<MessageTemplateKind>())
+            {
+                Assert.Contains(seeded, t => t.LanguageCode == lang && t.Kind == kind);
+            }
+        }
+
+        await store.SaveAsync(new MessageTemplate { LanguageCode = "en", Body = "Custom override" });
+        _factory.SeedDefaultTemplatesIfEmpty();
+
+        var afterSecondSeedAttempt = await store.GetAllAsync();
+        Assert.Equal(12, afterSecondSeedAttempt.Count);
+        Assert.Equal("Custom override", afterSecondSeedAttempt.Single(t => t.LanguageCode == "en" && t.Kind == MessageTemplateKind.Request).Body);
     }
 
     [Fact]

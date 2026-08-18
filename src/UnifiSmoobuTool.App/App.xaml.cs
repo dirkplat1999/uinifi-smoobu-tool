@@ -88,6 +88,7 @@ public partial class App : System.Windows.Application
         {
             var connectionFactory = _host.Services.GetRequiredService<SqliteConnectionFactory>();
             connectionFactory.EnsureSchema();
+            connectionFactory.SeedDefaultTemplatesIfEmpty();
         }
         catch (Exception ex)
         {

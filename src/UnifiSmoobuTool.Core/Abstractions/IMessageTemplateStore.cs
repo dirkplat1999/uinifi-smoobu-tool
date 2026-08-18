@@ -8,5 +8,5 @@ public interface IMessageTemplateStore
 
     Task SaveAsync(MessageTemplate template, CancellationToken ct = default);
 
-    Task DeleteAsync(string languageCode, CancellationToken ct = default);
+    Task DeleteAsync(string languageCode, MessageTemplateKind kind, CancellationToken ct = default);
 }

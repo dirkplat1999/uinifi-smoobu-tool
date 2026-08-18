@@ -27,6 +27,12 @@ public sealed class AppSettings
     /// <summary>When false, confidently-parsed guest replies still wait for manual approval in the Dashboard.</summary>
     public bool AutoApproveParsedReplies { get; set; } = true;
 
+    /// <summary>When false, the app never sends any automated guest-facing messages (arrival
+    /// requests, clarification requests, confirmations) - useful when guest communication should
+    /// be handled manually while the rest of the automation (access provisioning, webhooks) keeps
+    /// running.</summary>
+    public bool GuestMessagingEnabled { get; set; } = true;
+
     /// <summary>Leading country/land indicators to strip from license plate text (e.g. "NL", "D", "B", "F").</summary>
     public List<string> LicensePlateCountryPrefixes { get; set; } =
         new() { "NL", "D", "B", "F", "GB", "PL", "DK", "LUX", "A" };

@@ -29,7 +29,7 @@ public class TemplateRendererTests
             new MessageTemplate { LanguageCode = "nl", Body = "dutch" },
         };
 
-        var selected = TemplateRenderer.SelectTemplate(templates, "nl", "en");
+        var selected = TemplateRenderer.SelectTemplate(templates, MessageTemplateKind.Request, "nl", "en");
 
         Assert.Equal("dutch", selected.Body);
     }
@@ -43,7 +43,7 @@ public class TemplateRendererTests
             new MessageTemplate { LanguageCode = "nl", Body = "dutch" },
         };
 
-        var selected = TemplateRenderer.SelectTemplate(templates, "fr", "en");
+        var selected = TemplateRenderer.SelectTemplate(templates, MessageTemplateKind.Request, "fr", "en");
 
         Assert.Equal("english", selected.Body);
     }
@@ -52,6 +52,29 @@ public class TemplateRendererTests
     public void SelectTemplate_Throws_WhenNoTemplatesConfigured()
     {
         Assert.Throws<InvalidOperationException>(() =>
-            TemplateRenderer.SelectTemplate(Array.Empty<MessageTemplate>(), "en", "en"));
+            TemplateRenderer.SelectTemplate(Array.Empty<MessageTemplate>(), MessageTemplateKind.Request, "en", "en"));
+    }
+
+    [Fact]
+    public void SelectTemplate_OnlyConsidersTemplatesOfTheRequestedKind()
+    {
+        var templates = new[]
+        {
+            new MessageTemplate { LanguageCode = "en", Kind = MessageTemplateKind.Request, Body = "request" },
+            new MessageTemplate { LanguageCode = "en", Kind = MessageTemplateKind.Confirmation, Body = "confirmation" },
+        };
+
+        var selected = TemplateRenderer.SelectTemplate(templates, MessageTemplateKind.Confirmation, "en", "en");
+
+        Assert.Equal("confirmation", selected.Body);
+    }
+
+    [Fact]
+    public void SelectTemplate_Throws_WhenNoTemplatesOfTheRequestedKindExist()
+    {
+        var templates = new[] { new MessageTemplate { LanguageCode = "en", Kind = MessageTemplateKind.Request, Body = "request" } };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            TemplateRenderer.SelectTemplate(templates, MessageTemplateKind.Clarification, "en", "en"));
     }
 }

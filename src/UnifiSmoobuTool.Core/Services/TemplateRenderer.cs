@@ -18,22 +18,25 @@ public static class TemplateRenderer
         return result;
     }
 
-    /// <summary>Picks the template matching the guest's language, falling back to the configured
-    /// default language, and finally to whatever template exists first.</summary>
+    /// <summary>Picks the template of the given <paramref name="kind"/> matching the guest's
+    /// language, falling back to the configured default language, and finally to whatever template
+    /// of that kind exists first.</summary>
     public static MessageTemplate SelectTemplate(
         IReadOnlyCollection<MessageTemplate> templates,
+        MessageTemplateKind kind,
         string? guestLanguageCode,
         string defaultLanguageCode)
     {
         ArgumentNullException.ThrowIfNull(templates);
-        if (templates.Count == 0)
+        var candidates = templates.Where(t => t.Kind == kind).ToList();
+        if (candidates.Count == 0)
         {
-            throw new InvalidOperationException("No message templates are configured.");
+            throw new InvalidOperationException($"No \"{kind}\" message templates are configured.");
         }
 
         if (!string.IsNullOrWhiteSpace(guestLanguageCode))
         {
-            var match = templates.FirstOrDefault(t =>
+            var match = candidates.FirstOrDefault(t =>
                 string.Equals(t.LanguageCode, guestLanguageCode, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
@@ -41,9 +44,9 @@ public static class TemplateRenderer
             }
         }
 
-        var fallback = templates.FirstOrDefault(t =>
+        var fallback = candidates.FirstOrDefault(t =>
             string.Equals(t.LanguageCode, defaultLanguageCode, StringComparison.OrdinalIgnoreCase));
 
-        return fallback ?? templates.First();
+        return fallback ?? candidates[0];
     }
 }

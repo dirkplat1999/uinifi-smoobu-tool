@@ -17,7 +17,9 @@ public sealed class SqliteReservationStateStore : IReservationStateStore
         access_created_at AS AccessCreatedAt,
         unifi_visitor_id AS UnifiVisitorId,
         access_revoked_at AS AccessRevokedAt,
-        arrival_day_notified_at AS ArrivalDayNotifiedAt
+        arrival_day_notified_at AS ArrivalDayNotifiedAt,
+        clarification_requested_at AS ClarificationRequestedAt,
+        confirmation_sent_at AS ConfirmationSentAt
         """;
 
     private readonly SqliteConnectionFactory _factory;
@@ -44,11 +46,11 @@ public sealed class SqliteReservationStateStore : IReservationStateStore
             INSERT INTO reservation_state
                 (reservation_id, request_message_sent_at, guest_reply_received_at, parsed_license_plate,
                  parsed_pin_code, needs_manual_review, access_created_at, unifi_visitor_id, access_revoked_at,
-                 arrival_day_notified_at)
+                 arrival_day_notified_at, clarification_requested_at, confirmation_sent_at)
             VALUES
                 (@ReservationId, @RequestMessageSentAt, @GuestReplyReceivedAt, @ParsedLicensePlate,
                  @ParsedPinCode, @NeedsManualReview, @AccessCreatedAt, @UnifiVisitorId, @AccessRevokedAt,
-                 @ArrivalDayNotifiedAt)
+                 @ArrivalDayNotifiedAt, @ClarificationRequestedAt, @ConfirmationSentAt)
             ON CONFLICT(reservation_id) DO UPDATE SET
                 request_message_sent_at = excluded.request_message_sent_at,
                 guest_reply_received_at = excluded.guest_reply_received_at,
@@ -58,7 +60,9 @@ public sealed class SqliteReservationStateStore : IReservationStateStore
                 access_created_at = excluded.access_created_at,
                 unifi_visitor_id = excluded.unifi_visitor_id,
                 access_revoked_at = excluded.access_revoked_at,
-                arrival_day_notified_at = excluded.arrival_day_notified_at;
+                arrival_day_notified_at = excluded.arrival_day_notified_at,
+                clarification_requested_at = excluded.clarification_requested_at,
+                confirmation_sent_at = excluded.confirmation_sent_at;
             """,
             ReservationStateRow.FromModel(state)).ConfigureAwait(false);
     }
@@ -83,6 +87,8 @@ public sealed class SqliteReservationStateStore : IReservationStateStore
         public string? UnifiVisitorId { get; set; }
         public string? AccessRevokedAt { get; set; }
         public string? ArrivalDayNotifiedAt { get; set; }
+        public string? ClarificationRequestedAt { get; set; }
+        public string? ConfirmationSentAt { get; set; }
 
         public ReservationProcessingState ToModel() => new()
         {
@@ -96,6 +102,8 @@ public sealed class SqliteReservationStateStore : IReservationStateStore
             UnifiVisitorId = UnifiVisitorId,
             AccessRevokedAt = Parse(AccessRevokedAt),
             ArrivalDayNotifiedAt = Parse(ArrivalDayNotifiedAt),
+            ClarificationRequestedAt = Parse(ClarificationRequestedAt),
+            ConfirmationSentAt = Parse(ConfirmationSentAt),
         };
 
         public static ReservationStateRow FromModel(ReservationProcessingState s) => new()
@@ -110,6 +118,8 @@ public sealed class SqliteReservationStateStore : IReservationStateStore
             UnifiVisitorId = s.UnifiVisitorId,
             AccessRevokedAt = Format(s.AccessRevokedAt),
             ArrivalDayNotifiedAt = Format(s.ArrivalDayNotifiedAt),
+            ClarificationRequestedAt = Format(s.ClarificationRequestedAt),
+            ConfirmationSentAt = Format(s.ConfirmationSentAt),
         };
 
         private static DateTimeOffset? Parse(string? value) =>

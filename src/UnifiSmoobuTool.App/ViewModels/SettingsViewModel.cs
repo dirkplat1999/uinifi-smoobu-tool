@@ -79,6 +79,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _autoApproveParsedReplies = true;
 
     [ObservableProperty]
+    private bool _guestMessagingEnabled = true;
+
+    [ObservableProperty]
     private string _licensePlateCountryPrefixesText = "";
 
     [ObservableProperty]
@@ -148,6 +151,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             MessageLeadDays = settings.MessageLeadDays;
             DefaultTemplateLanguage = settings.DefaultTemplateLanguage;
             AutoApproveParsedReplies = settings.AutoApproveParsedReplies;
+            GuestMessagingEnabled = settings.GuestMessagingEnabled;
             LicensePlateCountryPrefixesText = string.Join(", ", settings.LicensePlateCountryPrefixes);
 
             SmtpEnabled = settings.Smtp is not null;
@@ -203,6 +207,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             settings.MessageLeadDays = Math.Max(0, MessageLeadDays);
             settings.DefaultTemplateLanguage = string.IsNullOrWhiteSpace(DefaultTemplateLanguage) ? "en" : DefaultTemplateLanguage.Trim();
             settings.AutoApproveParsedReplies = AutoApproveParsedReplies;
+            settings.GuestMessagingEnabled = GuestMessagingEnabled;
             settings.LicensePlateCountryPrefixes = LicensePlateCountryPrefixesText
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList();

@@ -172,7 +172,7 @@ public sealed class BookingSyncOrchestrator
     private async Task MaybeSendRequestMessageAsync(
         Reservation reservation, ReservationProcessingState state, AppSettings settings, DateOnly today, CancellationToken ct)
     {
-        if (state.RequestMessageSentAt is not null)
+        if (!settings.GuestMessagingEnabled || state.RequestMessageSentAt is not null)
         {
             return;
         }
@@ -183,32 +183,41 @@ public sealed class BookingSyncOrchestrator
             return;
         }
 
-        var templates = await _templateStore.GetAllAsync(ct).ConfigureAwait(false);
-        var template = TemplateRenderer.SelectTemplate(templates, reservation.GuestLanguage, settings.DefaultTemplateLanguage);
-
-        var placeholders = BuildPlaceholders(reservation);
-        var body = TemplateRenderer.Render(template.Body, placeholders);
-        if (settings.TestModeEnabled)
-        {
-            body = "[TEST] " + body;
-        }
-
-        await _smoobu.SendMessageToGuestAsync(reservation.Id, body, ct).ConfigureAwait(false);
+        await SendGuestMessageAsync(reservation, MessageTemplateKind.Request, settings, ct).ConfigureAwait(false);
         state.RequestMessageSentAt = _clock.UtcNow;
         _logger.LogInformation("Sent guest-info request for reservation {ReservationId}.", reservation.Id);
     }
 
+    /// <summary>Parses the guest's reply once a request has been sent. When the reply can't be
+    /// confidently read, sends one automatic clarification request and allows a single follow-up
+    /// reply to be re-checked; when it's read clearly, sends a confirmation regardless of whether
+    /// <see cref="AppSettings.AutoApproveParsedReplies"/> still requires manual sign-off - that
+    /// setting controls internal review, not whether the guest gets a "thanks, got it".</summary>
     private async Task MaybeParseGuestReplyAsync(
         Reservation reservation, ReservationProcessingState state, AppSettings settings, CancellationToken ct)
     {
-        if (state.RequestMessageSentAt is null || state.GuestReplyReceivedAt is not null)
+        if (state.RequestMessageSentAt is null)
         {
             return;
         }
 
+        if (state.GuestReplyReceivedAt is not null && !state.NeedsManualReview)
+        {
+            return;
+        }
+
+        if (state.GuestReplyReceivedAt is not null && state.NeedsManualReview && state.ClarificationRequestedAt is null)
+        {
+            // Already flagged for manual review and no clarification was sent (e.g. guest messaging
+            // was disabled at the time) - nothing more to do automatically; a human resolves it.
+            return;
+        }
+
+        var since = state.ClarificationRequestedAt ?? state.RequestMessageSentAt.Value;
+
         var messages = await _smoobu.GetMessagesAsync(reservation.Id, ct).ConfigureAwait(false);
         var reply = messages
-            .Where(m => m.Direction == MessageDirection.GuestToHost && m.SentAt >= state.RequestMessageSentAt)
+            .Where(m => m.Direction == MessageDirection.GuestToHost && m.SentAt >= since)
             .OrderBy(m => m.SentAt)
             .FirstOrDefault();
 
@@ -220,19 +229,52 @@ public sealed class BookingSyncOrchestrator
         var parsed = GuestReplyParser.Parse(reply.Text);
         state.GuestReplyReceivedAt = _clock.UtcNow;
 
-        if (parsed.PinCode is null || parsed.RawLicensePlate is null)
+        bool parseFoundBoth = parsed.PinCode is not null && parsed.RawLicensePlate is not null;
+        bool parseIsClear = parseFoundBoth && parsed.IsConfident;
+
+        if (parseFoundBoth)
         {
-            state.NeedsManualReview = true;
-            _logger.LogWarning("Could not confidently parse a reply for reservation {ReservationId}; flagged for manual review.", reservation.Id);
+            state.ParsedPinCode = parsed.PinCode;
+            state.ParsedLicensePlate = PlateNormalizer.Normalize(parsed.RawLicensePlate!, settings.LicensePlateCountryPrefixes);
         }
         else
         {
-            state.ParsedPinCode = parsed.PinCode;
-            state.ParsedLicensePlate = PlateNormalizer.Normalize(parsed.RawLicensePlate, settings.LicensePlateCountryPrefixes);
-            state.NeedsManualReview = !parsed.IsConfident || !settings.AutoApproveParsedReplies;
+            _logger.LogWarning("Could not confidently parse a reply for reservation {ReservationId}; flagged for manual review.", reservation.Id);
+        }
+
+        state.NeedsManualReview = !parseIsClear || !settings.AutoApproveParsedReplies;
+
+        if (parseIsClear)
+        {
+            if (settings.GuestMessagingEnabled)
+            {
+                await SendGuestMessageAsync(reservation, MessageTemplateKind.Confirmation, settings, ct).ConfigureAwait(false);
+                state.ConfirmationSentAt = _clock.UtcNow;
+            }
+        }
+        else if (settings.GuestMessagingEnabled && state.ClarificationRequestedAt is null)
+        {
+            await SendGuestMessageAsync(reservation, MessageTemplateKind.Clarification, settings, ct).ConfigureAwait(false);
+            state.ClarificationRequestedAt = _clock.UtcNow;
         }
 
         await FireWebhooksAsync(reservation, AutomationTrigger.GuestReplyReceived, settings, ct).ConfigureAwait(false);
+    }
+
+    private async Task SendGuestMessageAsync(
+        Reservation reservation, MessageTemplateKind kind, AppSettings settings, CancellationToken ct)
+    {
+        var templates = await _templateStore.GetAllAsync(ct).ConfigureAwait(false);
+        var template = TemplateRenderer.SelectTemplate(templates, kind, reservation.GuestLanguage, settings.DefaultTemplateLanguage);
+
+        var placeholders = BuildPlaceholders(reservation);
+        var body = TemplateRenderer.Render(template.Body, placeholders);
+        if (settings.TestModeEnabled)
+        {
+            body = "[TEST] " + body;
+        }
+
+        await _smoobu.SendMessageToGuestAsync(reservation.Id, body, ct).ConfigureAwait(false);
     }
 
     private async Task ProvisionAccessAsync(

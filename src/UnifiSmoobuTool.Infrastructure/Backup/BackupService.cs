@@ -63,6 +63,7 @@ public sealed class BackupService
             DefaultTemplateLanguage = settings.DefaultTemplateLanguage,
             TestModeEnabled = settings.TestModeEnabled,
             AutoApproveParsedReplies = settings.AutoApproveParsedReplies,
+            GuestMessagingEnabled = settings.GuestMessagingEnabled,
             LicensePlateCountryPrefixes = new List<string>(settings.LicensePlateCountryPrefixes),
             Smtp = settings.Smtp is null ? null : new SmtpSettings
             {

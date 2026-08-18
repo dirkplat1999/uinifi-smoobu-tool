@@ -46,6 +46,11 @@
 
                 <GroupBox Header="Sync behavior" Margin="0,0,0,12" Padding="8">
                     <StackPanel>
+                        <CheckBox Content="Automatically message guests (arrival requests, clarification requests, confirmations)"
+                                  IsChecked="{Binding GuestMessagingEnabled}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Turn this off to handle all guest communication yourself - the app will still parse replies you already received and provision access after manual review."
+                                   Opacity="0.7" TextWrapping="Wrap" Margin="0,0,0,8"
+                                   Visibility="{Binding GuestMessagingEnabled, Converter={StaticResource InverseBoolToVis}}"/>
                         <TextBlock Text="Polling interval (minutes)" Margin="0,0,0,2"/>
                         <TextBox Text="{Binding PollingIntervalMinutes, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
                         <TextBlock Text="Send the guest-info request this many days before arrival" Margin="0,0,0,2"/>

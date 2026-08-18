@@ -99,8 +99,9 @@ public partial class MainWindow : Window
 
         if (result.Status == UpdateCheckStatus.UpdateAvailable)
         {
+            var notes = string.IsNullOrWhiteSpace(result.ReleaseNotes) ? "" : $"\n\nWhat's new:\n{result.ReleaseNotes}";
             var confirm = System.Windows.MessageBox.Show(
-                $"A new version is available: {result.Detail}. Download and install it now? The app will restart.",
+                $"A new version is available: {result.Detail}.{notes}\n\nDownload and install it now? The app will restart.",
                 "Update available", MessageBoxButton.OKCancel, MessageBoxImage.Information);
 
             if (confirm == MessageBoxResult.OK)
