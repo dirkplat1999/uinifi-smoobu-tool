@@ -205,6 +205,33 @@ internal sealed class InMemoryTestModeRuleStore : ITestModeRuleStore
     }
 }
 
+internal sealed class InMemoryChannelMessagingSettingsStore : IChannelMessagingSettingsStore
+{
+    public List<ChannelMessagingSetting> Settings { get; } = new();
+
+    public Task<IReadOnlyList<ChannelMessagingSetting>> GetAllAsync(CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<ChannelMessagingSetting>>(Settings);
+
+    public Task<ChannelMessagingSetting?> GetAsync(string channelName, CancellationToken ct = default)
+        => Task.FromResult(Settings.FirstOrDefault(s => s.ChannelName == channelName));
+
+    public Task SaveAsync(ChannelMessagingSetting setting, CancellationToken ct = default)
+    {
+        Settings.RemoveAll(s => s.ChannelName == setting.ChannelName);
+        Settings.Add(setting);
+        return Task.CompletedTask;
+    }
+
+    public Task EnsureRegisteredAsync(string channelName, CancellationToken ct = default)
+    {
+        if (!Settings.Any(s => s.ChannelName == channelName))
+        {
+            Settings.Add(new ChannelMessagingSetting { ChannelName = channelName, Enabled = true });
+        }
+        return Task.CompletedTask;
+    }
+}
+
 internal sealed class FakeWebhookSender : IWebhookSender
 {
     public List<(string Url, WebhookMethod Method, string? Payload)> Calls { get; } = new();

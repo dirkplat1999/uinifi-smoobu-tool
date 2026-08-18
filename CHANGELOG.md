@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Guest messaging can now be turned on/off per booking channel (Airbnb, Booking.com, Direct, ...) -
+  channels are detected automatically as bookings sync in, with a toggle for each in Settings.
+- Dashboard shows which booking channel each reservation came from, and - when that channel's
+  messaging is off - a "Send anyway" checkbox to still message that one guest.
+
 ## 1.1.1
 
 - The "Add template" button on the Message Templates screen now prefills the correct built-in

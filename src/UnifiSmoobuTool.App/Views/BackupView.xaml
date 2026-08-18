@@ -29,6 +29,7 @@
                     <TextBlock Text="{Binding PendingImportPreview.WebhookCount, StringFormat='Automation webhooks: {0}'}"/>
                     <TextBlock Text="{Binding PendingImportPreview.ApartmentMappingCount, StringFormat='Apartment mappings: {0}'}"/>
                     <TextBlock Text="{Binding PendingImportPreview.TestModeRuleCount, StringFormat='Test mode rules: {0}'}"/>
+                    <TextBlock Text="{Binding PendingImportPreview.ChannelSettingCount, StringFormat='Booking channel settings: {0}'}"/>
                     <TextBlock Text="{Binding PendingImportPreview.HasEncryptedSecrets, StringFormat='Includes encrypted credentials: {0}'}" Margin="0,0,0,8"/>
 
                     <StackPanel Orientation="Horizontal" Visibility="{Binding PendingImportPreview.HasEncryptedSecrets, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8">

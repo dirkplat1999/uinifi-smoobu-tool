@@ -21,6 +21,7 @@ public sealed class BookingSyncOrchestrator
     private readonly IApartmentMappingStore _mappingStore;
     private readonly IWebhookConfigStore _webhookStore;
     private readonly ITestModeRuleStore _testModeStore;
+    private readonly IChannelMessagingSettingsStore _channelSettingsStore;
     private readonly WebhookDispatcher _webhookDispatcher;
     private readonly IErrorNotifier _errorNotifier;
     private readonly IClock _clock;
@@ -36,6 +37,7 @@ public sealed class BookingSyncOrchestrator
         IApartmentMappingStore mappingStore,
         IWebhookConfigStore webhookStore,
         ITestModeRuleStore testModeStore,
+        IChannelMessagingSettingsStore channelSettingsStore,
         WebhookDispatcher webhookDispatcher,
         IErrorNotifier errorNotifier,
         IClock clock,
@@ -50,6 +52,7 @@ public sealed class BookingSyncOrchestrator
         _mappingStore = mappingStore ?? throw new ArgumentNullException(nameof(mappingStore));
         _webhookStore = webhookStore ?? throw new ArgumentNullException(nameof(webhookStore));
         _testModeStore = testModeStore ?? throw new ArgumentNullException(nameof(testModeStore));
+        _channelSettingsStore = channelSettingsStore ?? throw new ArgumentNullException(nameof(channelSettingsStore));
         _webhookDispatcher = webhookDispatcher ?? throw new ArgumentNullException(nameof(webhookDispatcher));
         _errorNotifier = errorNotifier ?? throw new ArgumentNullException(nameof(errorNotifier));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -124,6 +127,17 @@ public sealed class BookingSyncOrchestrator
         await ProvisionAccessAsync(reservation, state, settings, ct).ConfigureAwait(false);
     }
 
+    /// <summary>Checked from the Dashboard to force-send guest messages for one reservation even
+    /// though its booking channel currently has messaging disabled.</summary>
+    public async Task SetMessagingOverrideAsync(long reservationId, bool enabled, CancellationToken ct = default)
+    {
+        var state = await _stateStore.GetAsync(reservationId, ct).ConfigureAwait(false)
+            ?? new ReservationProcessingState { ReservationId = reservationId };
+
+        state.MessagingOverrideEnabled = enabled;
+        await _stateStore.SaveAsync(state, ct).ConfigureAwait(false);
+    }
+
     private async Task ProcessReservationAsync(
         Reservation reservation,
         AppSettings settings,
@@ -134,6 +148,11 @@ public sealed class BookingSyncOrchestrator
         if (!TestModeFilter.ShouldProcess(reservation, settings.TestModeEnabled, testModeRules))
         {
             return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(reservation.Channel))
+        {
+            await _channelSettingsStore.EnsureRegisteredAsync(reservation.Channel, ct).ConfigureAwait(false);
         }
 
         var state = await _stateStore.GetAsync(reservation.Id, ct).ConfigureAwait(false);
@@ -172,7 +191,7 @@ public sealed class BookingSyncOrchestrator
     private async Task MaybeSendRequestMessageAsync(
         Reservation reservation, ReservationProcessingState state, AppSettings settings, DateOnly today, CancellationToken ct)
     {
-        if (!settings.GuestMessagingEnabled || state.RequestMessageSentAt is not null)
+        if (state.RequestMessageSentAt is not null || !await ShouldSendGuestMessagesAsync(reservation, state, settings, ct).ConfigureAwait(false))
         {
             return;
         }
@@ -244,21 +263,42 @@ public sealed class BookingSyncOrchestrator
 
         state.NeedsManualReview = !parseIsClear || !settings.AutoApproveParsedReplies;
 
+        var shouldSendMessages = await ShouldSendGuestMessagesAsync(reservation, state, settings, ct).ConfigureAwait(false);
         if (parseIsClear)
         {
-            if (settings.GuestMessagingEnabled)
+            if (shouldSendMessages)
             {
                 await SendGuestMessageAsync(reservation, MessageTemplateKind.Confirmation, settings, ct).ConfigureAwait(false);
                 state.ConfirmationSentAt = _clock.UtcNow;
             }
         }
-        else if (settings.GuestMessagingEnabled && state.ClarificationRequestedAt is null)
+        else if (shouldSendMessages && state.ClarificationRequestedAt is null)
         {
             await SendGuestMessageAsync(reservation, MessageTemplateKind.Clarification, settings, ct).ConfigureAwait(false);
             state.ClarificationRequestedAt = _clock.UtcNow;
         }
 
         await FireWebhooksAsync(reservation, AutomationTrigger.GuestReplyReceived, settings, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Gate for every guest-facing message: the global master switch, then (if the
+    /// reservation has a known booking channel) that channel's on/off setting, with a per-reservation
+    /// override that lets one specific guest still be messaged on an otherwise-disabled channel.</summary>
+    private async Task<bool> ShouldSendGuestMessagesAsync(
+        Reservation reservation, ReservationProcessingState state, AppSettings settings, CancellationToken ct)
+    {
+        if (!settings.GuestMessagingEnabled)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(reservation.Channel))
+        {
+            return true;
+        }
+
+        var channelSetting = await _channelSettingsStore.GetAsync(reservation.Channel, ct).ConfigureAwait(false);
+        return channelSetting is null || channelSetting.Enabled || state.MessagingOverrideEnabled;
     }
 
     private async Task SendGuestMessageAsync(

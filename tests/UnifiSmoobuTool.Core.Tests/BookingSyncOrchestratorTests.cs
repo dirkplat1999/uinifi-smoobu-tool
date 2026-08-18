@@ -18,6 +18,7 @@ public class BookingSyncOrchestratorTests
         public InMemoryApartmentMappingStore Mappings { get; } = new();
         public InMemoryWebhookConfigStore Webhooks { get; } = new();
         public InMemoryTestModeRuleStore TestModeRules { get; } = new();
+        public InMemoryChannelMessagingSettingsStore ChannelSettings { get; } = new();
         public FakeWebhookSender WebhookSender { get; } = new();
         public FakeErrorNotifier ErrorNotifier { get; } = new();
 
@@ -47,13 +48,13 @@ public class BookingSyncOrchestratorTests
         }
 
         public BookingSyncOrchestrator BuildOrchestrator() => new(
-            Smoobu, Unifi, States, Settings, Templates, Mappings, Webhooks, TestModeRules,
+            Smoobu, Unifi, States, Settings, Templates, Mappings, Webhooks, TestModeRules, ChannelSettings,
             new WebhookDispatcher(WebhookSender), ErrorNotifier, Clock,
             NullLogger<BookingSyncOrchestrator>.Instance,
             TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time"));
     }
 
-    private static Reservation MakeReservation(long id, DateOnly arrival, DateOnly departure, int apartmentId = 1) => new()
+    private static Reservation MakeReservation(long id, DateOnly arrival, DateOnly departure, int apartmentId = 1, string? channel = null) => new()
     {
         Id = id,
         ApartmentId = apartmentId,
@@ -63,6 +64,7 @@ public class BookingSyncOrchestratorTests
         GuestEmail = "alex@example.com",
         GuestPhone = "+31612345678",
         GuestLanguage = "en",
+        Channel = channel,
         Arrival = arrival,
         Departure = departure,
         Status = ReservationStatus.Confirmed,
@@ -291,5 +293,54 @@ public class BookingSyncOrchestratorTests
         await h.BuildOrchestrator().RunOnceAsync();
 
         Assert.Empty(h.Smoobu.SentMessages);
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_AutoRegistersChannel_AsEnabled_OnFirstSight()
+    {
+        var h = new Harness();
+        var today = DateOnly.FromDateTime(h.Clock.UtcNow.UtcDateTime);
+        h.Smoobu.Reservations.Add(MakeReservation(1, today.AddDays(3), today.AddDays(6), channel: "Airbnb"));
+
+        await h.BuildOrchestrator().RunOnceAsync();
+
+        var setting = await h.ChannelSettings.GetAsync("Airbnb");
+        Assert.NotNull(setting);
+        Assert.True(setting!.Enabled);
+        Assert.Single(h.Smoobu.SentMessages);
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_SkipsGuestMessaging_WhenChannelIsDisabled()
+    {
+        var h = new Harness();
+        h.ChannelSettings.Settings.Add(new ChannelMessagingSetting { ChannelName = "Airbnb", Enabled = false });
+
+        var today = DateOnly.FromDateTime(h.Clock.UtcNow.UtcDateTime);
+        h.Smoobu.Reservations.Add(MakeReservation(1, today.AddDays(3), today.AddDays(6), channel: "Airbnb"));
+
+        await h.BuildOrchestrator().RunOnceAsync();
+
+        Assert.Empty(h.Smoobu.SentMessages);
+        var state = await h.States.GetAsync(1);
+        Assert.Null(state!.RequestMessageSentAt);
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_SendsGuestMessaging_WhenChannelDisabledButOverrideEnabled()
+    {
+        var h = new Harness();
+        h.ChannelSettings.Settings.Add(new ChannelMessagingSetting { ChannelName = "Airbnb", Enabled = false });
+
+        var today = DateOnly.FromDateTime(h.Clock.UtcNow.UtcDateTime);
+        h.Smoobu.Reservations.Add(MakeReservation(1, today.AddDays(3), today.AddDays(6), channel: "Airbnb"));
+
+        var orchestrator = h.BuildOrchestrator();
+        await orchestrator.SetMessagingOverrideAsync(1, enabled: true);
+        await orchestrator.RunOnceAsync();
+
+        Assert.Single(h.Smoobu.SentMessages);
+        var state = await h.States.GetAsync(1);
+        Assert.NotNull(state!.RequestMessageSentAt);
     }
 }

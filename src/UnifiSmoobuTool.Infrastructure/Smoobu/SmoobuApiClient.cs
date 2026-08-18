@@ -129,6 +129,7 @@ public sealed class SmoobuApiClient : ISmoobuClient
             GuestEmail = dto.Email,
             GuestPhone = dto.Phone,
             GuestLanguage = dto.Language,
+            Channel = dto.Channel?.Name,
             Arrival = dto.Arrival,
             Departure = dto.Departure,
             Status = isCancelled ? ReservationStatus.Cancelled : ReservationStatus.Confirmed,

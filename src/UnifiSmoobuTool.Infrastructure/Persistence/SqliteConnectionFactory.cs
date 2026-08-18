@@ -39,6 +39,7 @@ public sealed class SqliteConnectionFactory
         AddColumnIfMissing(connection, "app_settings", "guest_messaging_enabled", "INTEGER NOT NULL DEFAULT 1");
         AddColumnIfMissing(connection, "reservation_state", "clarification_requested_at", "TEXT NULL");
         AddColumnIfMissing(connection, "reservation_state", "confirmation_sent_at", "TEXT NULL");
+        AddColumnIfMissing(connection, "reservation_state", "messaging_override_enabled", "INTEGER NOT NULL DEFAULT 0");
         MigrateMessageTemplatesTable(connection);
     }
 
@@ -207,6 +208,11 @@ public sealed class SqliteConnectionFactory
             type TEXT NOT NULL,
             value TEXT NOT NULL,
             PRIMARY KEY (type, value)
+        );
+
+        CREATE TABLE IF NOT EXISTS channel_messaging_settings (
+            channel_name TEXT PRIMARY KEY,
+            enabled INTEGER NOT NULL DEFAULT 1
         );
         """;
 }

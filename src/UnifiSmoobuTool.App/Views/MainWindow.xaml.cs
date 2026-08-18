@@ -93,6 +93,11 @@ public partial class MainWindow : Window
         new AboutWindow { Owner = this }.ShowDialog();
     }
 
+    private void ChangelogMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        new ChangelogWindow { Owner = this }.ShowDialog();
+    }
+
     private async void CheckForUpdatesMenuItem_Click(object sender, RoutedEventArgs e)
     {
         var result = await _updateChecker.CheckForUpdatesAsync();

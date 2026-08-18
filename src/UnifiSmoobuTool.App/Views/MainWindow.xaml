@@ -13,6 +13,7 @@
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="_Check for Updates" Click="CheckForUpdatesMenuItem_Click"/>
+                <MenuItem Header="C_hangelog" Click="ChangelogMenuItem_Click"/>
                 <Separator/>
                 <MenuItem Header="_About / License" Click="AboutMenuItem_Click"/>
             </MenuItem>

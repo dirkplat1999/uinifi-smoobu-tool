@@ -64,6 +64,22 @@
                     </StackPanel>
                 </GroupBox>
 
+                <GroupBox Header="Guest messaging per booking channel" Margin="0,0,0,12" Padding="8">
+                    <StackPanel>
+                        <TextBlock Text="Channels appear here automatically the first time a booking from them is synced (Airbnb, Booking.com, Direct, ...). Turn one off to stop automated guest messages for that channel only - a per-guest override is still available on the Dashboard."
+                                   TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,8"/>
+                        <TextBlock Text="No booking channels discovered yet - run a sync first." Opacity="0.7"
+                                   Visibility="{Binding HasChannelSettings, Converter={StaticResource InverseBoolToVis}}"/>
+                        <ItemsControl ItemsSource="{Binding ChannelSettings}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding ChannelName}" IsChecked="{Binding Enabled}" Margin="0,0,0,4"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </GroupBox>
+
                 <GroupBox Header="Error email alerts (SMTP)" Margin="0,0,0,12" Padding="8">
                     <StackPanel>
                         <CheckBox Content="Send an email when Smoobu or UniFi Access calls keep failing" IsChecked="{Binding SmtpEnabled}" Margin="0,0,0,8"/>

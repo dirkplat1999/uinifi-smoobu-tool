@@ -16,6 +16,7 @@ public sealed class BackupPreview
     public required int WebhookCount { get; init; }
     public required int ApartmentMappingCount { get; init; }
     public required int TestModeRuleCount { get; init; }
+    public required int ChannelSettingCount { get; init; }
 }
 
 internal sealed class ProtectedSecrets

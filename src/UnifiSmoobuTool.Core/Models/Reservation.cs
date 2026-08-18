@@ -10,6 +10,11 @@ public sealed record Reservation
     public string? GuestEmail { get; init; }
     public string? GuestPhone { get; init; }
     public string? GuestLanguage { get; init; }
+
+    /// <summary>The booking channel/platform this reservation came from (e.g. "Airbnb",
+    /// "Booking.com", "Direct"), as reported by Smoobu. Null when Smoobu doesn't report one.</summary>
+    public string? Channel { get; init; }
+
     public required DateOnly Arrival { get; init; }
     public required DateOnly Departure { get; init; }
     public ReservationStatus Status { get; init; } = ReservationStatus.Confirmed;

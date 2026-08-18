@@ -24,6 +24,15 @@ internal sealed class SmoobuApartmentDto
     public string? Name { get; set; }
 }
 
+internal sealed class SmoobuChannelDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
 internal sealed class SmoobuReservationListDto
 {
     [JsonPropertyName("bookings")]
@@ -49,6 +58,9 @@ internal sealed class SmoobuReservationDto
 
     [JsonPropertyName("apartment")]
     public SmoobuApartmentDto? Apartment { get; set; }
+
+    [JsonPropertyName("channel")]
+    public SmoobuChannelDto? Channel { get; set; }
 
     [JsonPropertyName("firstname")]
     public string? FirstName { get; set; }

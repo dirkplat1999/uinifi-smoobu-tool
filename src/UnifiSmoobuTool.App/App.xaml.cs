@@ -57,6 +57,7 @@ public partial class App : System.Windows.Application
         builder.Services.AddSingleton<IApartmentMappingStore, SqliteApartmentMappingStore>();
         builder.Services.AddSingleton<IWebhookConfigStore, SqliteWebhookConfigStore>();
         builder.Services.AddSingleton<ITestModeRuleStore, SqliteTestModeRuleStore>();
+        builder.Services.AddSingleton<IChannelMessagingSettingsStore, SqliteChannelMessagingSettingsStore>();
 
         builder.Services.AddHttpClient<ISmoobuClient, SmoobuApiClient>();
         builder.Services.AddSingleton<IUnifiAccessClient, UnifiAccessApiClient>();

@@ -16,6 +16,7 @@ public class BackupServiceTests : IDisposable
     private readonly SqliteWebhookConfigStore _webhookStore;
     private readonly SqliteApartmentMappingStore _mappingStore;
     private readonly SqliteTestModeRuleStore _testModeStore;
+    private readonly SqliteChannelMessagingSettingsStore _channelSettingsStore;
     private readonly BackupService _backupService;
 
     public BackupServiceTests()
@@ -31,8 +32,9 @@ public class BackupServiceTests : IDisposable
         _webhookStore = new SqliteWebhookConfigStore(_factory);
         _mappingStore = new SqliteApartmentMappingStore(_factory);
         _testModeStore = new SqliteTestModeRuleStore(_factory);
+        _channelSettingsStore = new SqliteChannelMessagingSettingsStore(_factory);
 
-        _backupService = new BackupService(_settingsStore, _templateStore, _webhookStore, _mappingStore, _testModeStore);
+        _backupService = new BackupService(_settingsStore, _templateStore, _webhookStore, _mappingStore, _testModeStore, _channelSettingsStore);
     }
 
     public void Dispose()
@@ -64,6 +66,7 @@ public class BackupServiceTests : IDisposable
             Url = "http://display.local/greet",
         });
         await _testModeStore.SaveAsync(new TestModeRule { Type = TestModeRuleType.Email, Value = "dirk@example.com" });
+        await _channelSettingsStore.SaveAsync(new ChannelMessagingSetting { ChannelName = "Airbnb", Enabled = false });
     }
 
     [Fact]
@@ -85,7 +88,8 @@ public class BackupServiceTests : IDisposable
             var freshWebhooks = new SqliteWebhookConfigStore(freshFactory);
             var freshMappings = new SqliteApartmentMappingStore(freshFactory);
             var freshTestMode = new SqliteTestModeRuleStore(freshFactory);
-            var freshBackupService = new BackupService(freshSettings, freshTemplates, freshWebhooks, freshMappings, freshTestMode);
+            var freshChannelSettings = new SqliteChannelMessagingSettingsStore(freshFactory);
+            var freshBackupService = new BackupService(freshSettings, freshTemplates, freshWebhooks, freshMappings, freshTestMode, freshChannelSettings);
 
             await freshBackupService.ImportAsync(_zipPath, passphrase: null);
 
@@ -99,6 +103,7 @@ public class BackupServiceTests : IDisposable
             Assert.Single(await freshWebhooks.GetAllAsync());
             Assert.Single(await freshMappings.GetAllAsync());
             Assert.Single(await freshTestMode.GetAllAsync());
+            Assert.Single(await freshChannelSettings.GetAllAsync());
         }
         finally
         {
@@ -125,7 +130,8 @@ public class BackupServiceTests : IDisposable
                 new SqliteMessageTemplateStore(freshFactory),
                 new SqliteWebhookConfigStore(freshFactory),
                 new SqliteApartmentMappingStore(freshFactory),
-                new SqliteTestModeRuleStore(freshFactory));
+                new SqliteTestModeRuleStore(freshFactory),
+                new SqliteChannelMessagingSettingsStore(freshFactory));
 
             await freshBackupService.ImportAsync(_zipPath, passphrase: "correct-horse-battery-staple");
 
@@ -170,6 +176,7 @@ public class BackupServiceTests : IDisposable
         Assert.Equal(1, preview.WebhookCount);
         Assert.Equal(1, preview.ApartmentMappingCount);
         Assert.Equal(1, preview.TestModeRuleCount);
+        Assert.Equal(1, preview.ChannelSettingCount);
         Assert.True(preview.HasEncryptedSecrets);
     }
 }

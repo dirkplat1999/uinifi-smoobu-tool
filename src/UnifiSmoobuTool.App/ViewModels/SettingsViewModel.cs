@@ -29,6 +29,14 @@ public sealed partial class ErrorWebhookRowViewModel : ObservableObject
     private bool _enabled = true;
 }
 
+public sealed partial class ChannelSettingRowViewModel : ObservableObject
+{
+    public required string ChannelName { get; init; }
+
+    [ObservableProperty]
+    private bool _enabled = true;
+}
+
 /// <summary>
 /// Backs the Settings screen: Smoobu/UniFi Access connection details (Features 1-6), sync
 /// behavior, license plate country-prefix stripping (Feature 3), SMTP alerting (Feature 14), and
@@ -38,6 +46,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly IAppSettingsStore _settingsStore;
     private readonly IWebhookConfigStore _webhookStore;
+    private readonly IChannelMessagingSettingsStore _channelSettingsStore;
     private readonly ISmoobuClient _smoobuClient;
     private readonly IUnifiAccessClient _unifiAccessClient;
     private readonly SmtpAlerter _smtpAlerter;
@@ -114,12 +123,17 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
+    [ObservableProperty]
+    private bool _hasChannelSettings;
+
     public ObservableCollection<ErrorWebhookRowViewModel> ErrorWebhooks { get; } = new();
+    public ObservableCollection<ChannelSettingRowViewModel> ChannelSettings { get; } = new();
     public WebhookMethod[] MethodOptions { get; } = Enum.GetValues<WebhookMethod>();
 
     public SettingsViewModel(
         IAppSettingsStore settingsStore,
         IWebhookConfigStore webhookStore,
+        IChannelMessagingSettingsStore channelSettingsStore,
         ISmoobuClient smoobuClient,
         IUnifiAccessClient unifiAccessClient,
         SmtpAlerter smtpAlerter,
@@ -127,6 +141,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         _settingsStore = settingsStore;
         _webhookStore = webhookStore;
+        _channelSettingsStore = channelSettingsStore;
         _smoobuClient = smoobuClient;
         _unifiAccessClient = unifiAccessClient;
         _smtpAlerter = smtpAlerter;
@@ -177,6 +192,14 @@ public sealed partial class SettingsViewModel : ObservableObject
                     Enabled = config.Enabled,
                 });
             }
+
+            var channelSettings = await _channelSettingsStore.GetAllAsync();
+            ChannelSettings.Clear();
+            foreach (var setting in channelSettings)
+            {
+                ChannelSettings.Add(new ChannelSettingRowViewModel { ChannelName = setting.ChannelName, Enabled = setting.Enabled });
+            }
+            HasChannelSettings = ChannelSettings.Count > 0;
 
             StatusMessage = "Settings loaded.";
         }
@@ -252,6 +275,11 @@ public sealed partial class SettingsViewModel : ObservableObject
                     PayloadTemplate = string.IsNullOrWhiteSpace(row.PayloadTemplate) ? null : row.PayloadTemplate,
                     Enabled = row.Enabled,
                 });
+            }
+
+            foreach (var row in ChannelSettings)
+            {
+                await _channelSettingsStore.SaveAsync(new ChannelMessagingSetting { ChannelName = row.ChannelName, Enabled = row.Enabled });
             }
 
             StatusMessage = "Settings saved.";

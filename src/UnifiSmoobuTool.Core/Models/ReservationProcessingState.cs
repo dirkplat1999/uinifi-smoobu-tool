@@ -23,6 +23,10 @@ public sealed class ReservationProcessingState
     /// was read clearly.</summary>
     public DateTimeOffset? ConfirmationSentAt { get; set; }
 
+    /// <summary>Manually checked on the Dashboard to force-send guest messages for this specific
+    /// reservation even though its booking channel has messaging disabled.</summary>
+    public bool MessagingOverrideEnabled { get; set; }
+
     public DateTimeOffset? AccessCreatedAt { get; set; }
     public string? UnifiVisitorId { get; set; }
 

@@ -225,4 +225,29 @@ public class SqlitePersistenceTests : IDisposable
         await store.DeleteAsync(rule);
         Assert.Empty(await store.GetAllAsync());
     }
+
+    [Fact]
+    public async Task ChannelMessagingSettingsStore_EnsureRegisteredAsync_DoesNotOverwriteExistingChoice()
+    {
+        var store = new SqliteChannelMessagingSettingsStore(_factory);
+
+        await store.EnsureRegisteredAsync("Airbnb");
+        var registered = await store.GetAsync("Airbnb");
+        Assert.NotNull(registered);
+        Assert.True(registered!.Enabled);
+
+        await store.SaveAsync(new ChannelMessagingSetting { ChannelName = "Airbnb", Enabled = false });
+        await store.EnsureRegisteredAsync("Airbnb");
+
+        var afterReRegister = await store.GetAsync("Airbnb");
+        Assert.False(afterReRegister!.Enabled);
+        Assert.Single(await store.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task ChannelMessagingSettingsStore_GetAsync_ReturnsNull_ForUnknownChannel()
+    {
+        var store = new SqliteChannelMessagingSettingsStore(_factory);
+        Assert.Null(await store.GetAsync("Vrbo"));
+    }
 }

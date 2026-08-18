@@ -52,7 +52,8 @@ public class SmoobuApiClientTests
                         "email": "alex@example.com",
                         "phone": "+31612345678",
                         "language": "nl",
-                        "status": "cancelled"
+                        "status": "cancelled",
+                        "channel": { "id": 2005, "name": "Airbnb" }
                     }
                 ],
                 "page": 1,
@@ -68,6 +69,33 @@ public class SmoobuApiClientTests
         Assert.Equal("Doe", reservation.GuestLastName);
         Assert.Equal("nl", reservation.GuestLanguage);
         Assert.Equal(ReservationStatus.Cancelled, reservation.Status);
+        Assert.Equal("Airbnb", reservation.Channel);
+    }
+
+    [Fact]
+    public async Task GetReservationsAsync_LeavesChannelNull_WhenNotReported()
+    {
+        var (client, handler) = Build();
+        handler.DefaultResponse = (200, """
+            {
+                "bookings": [
+                    {
+                        "id": 333,
+                        "arrival": "2026-08-20",
+                        "departure": "2026-08-24",
+                        "apartment": { "id": 5, "name": "Canal View" },
+                        "firstname": "Alex",
+                        "lastname": "Doe"
+                    }
+                ],
+                "page": 1,
+                "page_count": 1
+            }
+            """);
+
+        var reservations = await client.GetReservationsAsync(new DateOnly(2026, 8, 1), new DateOnly(2026, 9, 1));
+
+        Assert.Null(Assert.Single(reservations).Channel);
     }
 
     [Fact]

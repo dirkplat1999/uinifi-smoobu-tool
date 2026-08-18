@@ -21,19 +21,22 @@ public sealed class BackupService
     private readonly IWebhookConfigStore _webhookStore;
     private readonly IApartmentMappingStore _mappingStore;
     private readonly ITestModeRuleStore _testModeStore;
+    private readonly IChannelMessagingSettingsStore _channelSettingsStore;
 
     public BackupService(
         IAppSettingsStore settingsStore,
         IMessageTemplateStore templateStore,
         IWebhookConfigStore webhookStore,
         IApartmentMappingStore mappingStore,
-        ITestModeRuleStore testModeStore)
+        ITestModeRuleStore testModeStore,
+        IChannelMessagingSettingsStore channelSettingsStore)
     {
         _settingsStore = settingsStore ?? throw new ArgumentNullException(nameof(settingsStore));
         _templateStore = templateStore ?? throw new ArgumentNullException(nameof(templateStore));
         _webhookStore = webhookStore ?? throw new ArgumentNullException(nameof(webhookStore));
         _mappingStore = mappingStore ?? throw new ArgumentNullException(nameof(mappingStore));
         _testModeStore = testModeStore ?? throw new ArgumentNullException(nameof(testModeStore));
+        _channelSettingsStore = channelSettingsStore ?? throw new ArgumentNullException(nameof(channelSettingsStore));
     }
 
     public async Task ExportAsync(string filePath, bool includeCredentials, string? passphrase, CancellationToken ct = default)
@@ -49,6 +52,7 @@ public sealed class BackupService
         var webhooks = await _webhookStore.GetAllAsync(ct).ConfigureAwait(false);
         var mappings = await _mappingStore.GetAllAsync(ct).ConfigureAwait(false);
         var rules = await _testModeStore.GetAllAsync(ct).ConfigureAwait(false);
+        var channelSettings = await _channelSettingsStore.GetAllAsync(ct).ConfigureAwait(false);
 
         // Scrub credentials from the plain settings export; they only ever appear (encrypted) in
         // secrets.enc, and only when the caller opted in.
@@ -85,6 +89,7 @@ public sealed class BackupService
         await WriteJsonEntryAsync(zip, "webhooks.json", webhooks, ct).ConfigureAwait(false);
         await WriteJsonEntryAsync(zip, "apartment-mappings.json", mappings, ct).ConfigureAwait(false);
         await WriteJsonEntryAsync(zip, "test-mode-rules.json", rules, ct).ConfigureAwait(false);
+        await WriteJsonEntryAsync(zip, "channel-messaging-settings.json", channelSettings, ct).ConfigureAwait(false);
 
         if (includeCredentials)
         {
@@ -123,6 +128,7 @@ public sealed class BackupService
         var webhooks = await ReadJsonEntryAsync<List<WebhookConfig>>(zip, "webhooks.json", ct).ConfigureAwait(false) ?? new();
         var mappings = await ReadJsonEntryAsync<List<ApartmentAccessMapping>>(zip, "apartment-mappings.json", ct).ConfigureAwait(false) ?? new();
         var rules = await ReadJsonEntryAsync<List<TestModeRule>>(zip, "test-mode-rules.json", ct).ConfigureAwait(false) ?? new();
+        var channelSettings = await ReadJsonEntryAsync<List<ChannelMessagingSetting>>(zip, "channel-messaging-settings.json", ct).ConfigureAwait(false) ?? new();
 
         return new BackupPreview
         {
@@ -133,6 +139,7 @@ public sealed class BackupService
             WebhookCount = webhooks.Count,
             ApartmentMappingCount = mappings.Count,
             TestModeRuleCount = rules.Count,
+            ChannelSettingCount = channelSettings.Count,
         };
     }
 
@@ -210,6 +217,12 @@ public sealed class BackupService
         foreach (var rule in rules)
         {
             await _testModeStore.SaveAsync(rule, ct).ConfigureAwait(false);
+        }
+
+        var channelSettings = await ReadJsonEntryAsync<List<ChannelMessagingSetting>>(zip, "channel-messaging-settings.json", ct).ConfigureAwait(false) ?? new();
+        foreach (var channelSetting in channelSettings)
+        {
+            await _channelSettingsStore.SaveAsync(channelSetting, ct).ConfigureAwait(false);
         }
     }
 

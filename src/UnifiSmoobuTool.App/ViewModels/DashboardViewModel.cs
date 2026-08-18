@@ -7,13 +7,21 @@ using UnifiSmoobuTool.Core.Services;
 
 namespace UnifiSmoobuTool.App.ViewModels;
 
-public sealed class ReservationRowViewModel
+public sealed partial class ReservationRowViewModel : ObservableObject
 {
     public required Reservation Reservation { get; init; }
     public required ReservationProcessingState? State { get; init; }
 
+    /// <summary>True when this reservation's booking channel currently has guest messaging turned
+    /// off - controls whether the "Send messages anyway" override checkbox is shown at all.</summary>
+    public required bool IsChannelMessagingDisabled { get; init; }
+
+    [ObservableProperty]
+    private bool _sendMessagesAnyway;
+
     public string GuestName => Reservation.GuestFullName;
     public string ApartmentName => Reservation.ApartmentName;
+    public string Channel => string.IsNullOrWhiteSpace(Reservation.Channel) ? "-" : Reservation.Channel;
     public string Language => string.IsNullOrWhiteSpace(Reservation.GuestLanguage) ? "-" : Reservation.GuestLanguage.ToUpperInvariant();
     public string Arrival => Reservation.Arrival.ToString("dd-MM-yyyy");
     public string Departure => Reservation.Departure.ToString("dd-MM-yyyy");
@@ -52,6 +60,7 @@ public sealed partial class DashboardViewModel : ObservableObject
 {
     private readonly ISmoobuClient _smoobu;
     private readonly IReservationStateStore _stateStore;
+    private readonly IChannelMessagingSettingsStore _channelSettingsStore;
     private readonly BookingSyncOrchestrator _orchestrator;
     private readonly IClock _clock;
 
@@ -64,10 +73,16 @@ public sealed partial class DashboardViewModel : ObservableObject
     public ObservableCollection<ReservationRowViewModel> UpcomingReservations { get; } = new();
     public ObservableCollection<PendingReviewRowViewModel> PendingReview { get; } = new();
 
-    public DashboardViewModel(ISmoobuClient smoobu, IReservationStateStore stateStore, BookingSyncOrchestrator orchestrator, IClock clock)
+    public DashboardViewModel(
+        ISmoobuClient smoobu,
+        IReservationStateStore stateStore,
+        IChannelMessagingSettingsStore channelSettingsStore,
+        BookingSyncOrchestrator orchestrator,
+        IClock clock)
     {
         _smoobu = smoobu;
         _stateStore = stateStore;
+        _channelSettingsStore = channelSettingsStore;
         _orchestrator = orchestrator;
         _clock = clock;
     }
@@ -81,6 +96,8 @@ public sealed partial class DashboardViewModel : ObservableObject
         {
             var today = DateOnly.FromDateTime(_clock.UtcNow.LocalDateTime);
             var reservations = await _smoobu.GetReservationsAsync(today.AddDays(-2), today.AddDays(45));
+            var channelSettings = await _channelSettingsStore.GetAllAsync();
+            var disabledChannels = channelSettings.Where(c => !c.Enabled).Select(c => c.ChannelName).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             UpcomingReservations.Clear();
             PendingReview.Clear();
@@ -88,7 +105,14 @@ public sealed partial class DashboardViewModel : ObservableObject
             foreach (var reservation in reservations.OrderBy(r => r.Arrival))
             {
                 var state = await _stateStore.GetAsync(reservation.Id);
-                UpcomingReservations.Add(new ReservationRowViewModel { Reservation = reservation, State = state });
+                var isChannelDisabled = !string.IsNullOrWhiteSpace(reservation.Channel) && disabledChannels.Contains(reservation.Channel);
+                UpcomingReservations.Add(new ReservationRowViewModel
+                {
+                    Reservation = reservation,
+                    State = state,
+                    IsChannelMessagingDisabled = isChannelDisabled,
+                    SendMessagesAnyway = state?.MessagingOverrideEnabled ?? false,
+                });
 
                 if (state is { NeedsManualReview: true })
                 {
@@ -157,6 +181,29 @@ public sealed partial class DashboardViewModel : ObservableObject
         {
             IsBusy = false;
             await RefreshAsync();
+        }
+    }
+
+    /// <summary>Force-sends (or stops forcing) guest messages for one reservation whose booking
+    /// channel currently has messaging turned off, via the Dashboard checkbox.</summary>
+    [RelayCommand]
+    private async Task ToggleMessagingOverrideAsync(ReservationRowViewModel? row)
+    {
+        if (row is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _orchestrator.SetMessagingOverrideAsync(row.Reservation.Id, row.SendMessagesAnyway);
+            StatusMessage = row.SendMessagesAnyway
+                ? $"Will message {row.GuestName} anyway, even though the {row.Channel} channel is off."
+                : $"No longer overriding the channel setting for {row.GuestName}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Couldn't update the override: {ex.Message}";
         }
     }
 }
