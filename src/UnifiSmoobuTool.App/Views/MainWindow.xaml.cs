@@ -53,6 +53,30 @@ public partial class MainWindow : Window
 
     private void ExitMenuItem_Click(object sender, RoutedEventArgs e) => System.Windows.Application.Current.Shutdown();
 
+    private void UninstallMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var confirm = System.Windows.MessageBox.Show(
+            "This removes UniFi Smoobu Tool's program files and shortcuts from this computer.\n\n" +
+            "Your saved settings, message templates, and log files are kept on disk and are not " +
+            "deleted automatically.\n\nContinue?",
+            "Uninstall UniFi Smoobu Tool", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+
+        if (confirm != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var result = _updateChecker.TriggerUninstall();
+        if (!result.Started)
+        {
+            System.Windows.MessageBox.Show(
+                result.Error ?? "Couldn't start the uninstaller.", "Uninstall", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        System.Windows.Application.Current.Shutdown();
+    }
+
     private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
     {
         new AboutWindow { Owner = this }.ShowDialog();

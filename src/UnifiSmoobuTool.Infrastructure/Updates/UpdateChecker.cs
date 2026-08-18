@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Velopack;
 using Velopack.Sources;
@@ -53,6 +54,48 @@ public sealed class UpdateChecker
         await manager.DownloadUpdatesAsync(updateInfo, cancelToken: ct).ConfigureAwait(false);
         manager.ApplyUpdatesAndRestart(updateInfo.TargetFullRelease);
     }
+
+    /// <summary>Launches Velopack's own uninstaller (removes program files, shortcuts, and the
+    /// registry entry), which needs the app to exit immediately afterward so it can delete files
+    /// currently in use. Does not touch the app's local settings/database under %AppData%.</summary>
+    public UninstallResult TriggerUninstall()
+    {
+        try
+        {
+            var manager = new UpdateManager(new GithubSource(RepoUrl, null, false));
+            if (!manager.IsInstalled)
+            {
+                return UninstallResult.Failure("This feature is only available for the installed version of the app.");
+            }
+
+            var currentDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var rootDir = Directory.GetParent(currentDir)?.FullName;
+            if (rootDir is null)
+            {
+                return UninstallResult.Failure("Couldn't determine the install directory.");
+            }
+
+            var updateExePath = Path.Combine(rootDir, "Update.exe");
+            if (!File.Exists(updateExePath))
+            {
+                return UninstallResult.Failure($"Couldn't find the uninstaller at {updateExePath}.");
+            }
+
+            Process.Start(new ProcessStartInfo(updateExePath, "uninstall") { UseShellExecute = true });
+            return UninstallResult.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start the uninstaller.");
+            return UninstallResult.Failure(ex.Message);
+        }
+    }
+}
+
+public sealed record UninstallResult(bool Started, string? Error)
+{
+    public static UninstallResult Success() => new(true, null);
+    public static UninstallResult Failure(string error) => new(false, error);
 }
 
 public sealed record UpdateCheckResult(UpdateCheckStatus Status, string? Detail)
