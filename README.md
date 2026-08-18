@@ -43,10 +43,38 @@ dotnet run --project src/UnifiSmoobuTool.App
 
 ## Configuration
 
-On first launch, open **Settings** and fill in:
+Nothing is sent to either service until both API keys below are filled in. Open the app's
+**Settings** tab and fill in the **Smoobu** and **UniFi Access** sections.
 
-- **Smoobu API key** (Settings → Apps → API in your Smoobu account)
-- **UniFi Access controller host and API token** (Access console → Settings → API Token; the
-  Access API listens on port `12445`)
+### Getting your Smoobu API key
 
-Nothing is sent to either service until both are configured.
+1. Log in to your Smoobu account at [login.smoobu.com](https://login.smoobu.com).
+2. Open **Settings** (gear icon) → **Apps** → **API**.
+3. Copy the API key shown there (Smoobu generates one automatically per account; if none exists
+   yet, there's a button to create one).
+4. Paste it into **Settings → Smoobu → API key** in the app.
+
+Reference: [Smoobu API docs](https://docs.smoobu.com/).
+
+### Getting your UniFi Access controller host and API token
+
+1. Open the **UniFi Access** web console on your local network (the same device/controller that
+   manages your doors).
+2. Go to **Settings → Access API** (sometimes labeled **API Token** or **Developer API**,
+   depending on your controller's UniFi OS version).
+3. Click **Create New**, give it a name, choose a validity period, and select at least the
+   `view:visitor`, `edit:visitor`, and `view:space` permissions (needed to create/update visitors
+   and read your door/door-group list).
+4. Click **Create**, then **Copy API Token** immediately — it's only shown once. Store it
+   somewhere safe until you paste it into the app.
+5. In the app's **Settings → UniFi Access** section, fill in:
+   - **Controller host**: `https://<controller-ip-or-hostname>:12445` (the Access API always
+     listens on port `12445`, e.g. `https://192.168.1.1:12445`)
+   - **API token**: the token you just copied
+   - Leave **"Trust the controller's certificate"** checked unless you've replaced the
+     controller's default self-signed certificate with your own CA-signed one.
+6. Go to the **Apartments** tab, click **Refresh from Smoobu**, then **Load UniFi Access doors**,
+   and assign each apartment the door(s)/door-group(s) its guests should be able to open.
+
+Both the Smoobu API key and the UniFi Access API token are encrypted at rest (Windows DPAPI)
+in the local app database — they never leave your machine except in direct calls to Smoobu/UniFi.
