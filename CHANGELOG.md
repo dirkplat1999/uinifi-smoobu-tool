@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- The "Add template" button on the Message Templates screen now prefills the correct built-in
+  translation for the selected language and kind, instead of always inserting English text.
+
 ## 1.1.0
 
 - Default message templates for English, Dutch, German, and French, seeded automatically on first

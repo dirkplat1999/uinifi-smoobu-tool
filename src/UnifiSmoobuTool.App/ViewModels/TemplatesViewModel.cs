@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UnifiSmoobuTool.Core.Abstractions;
 using UnifiSmoobuTool.Core.Models;
+using UnifiSmoobuTool.Core.Services;
 
 namespace UnifiSmoobuTool.App.ViewModels;
 
@@ -127,7 +128,9 @@ public sealed partial class TemplatesViewModel : ObservableObject
             return;
         }
 
-        var row = new TemplateRowViewModel(code, NewKind, "Hi {{guest_first_name}}, could you send us your license plate and a 4-digit PIN before arrival?");
+        var body = DefaultMessageTemplates.TryGetBody(code, NewKind)
+            ?? "Hi {{guest_first_name}}, could you send us your license plate and a 4-digit PIN before arrival?";
+        var row = new TemplateRowViewModel(code, NewKind, body);
         Templates.Add(row);
         SelectedTemplate = row;
         NewCustomLanguageCode = "";

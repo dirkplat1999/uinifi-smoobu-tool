@@ -112,45 +112,14 @@ public sealed class SqliteConnectionFactory
         bodyParam.ParameterName = "@body";
         insertCommand.Parameters.Add(bodyParam);
 
-        foreach (var (lang, kind, body) in DefaultTemplates)
+        foreach (var template in Core.Services.DefaultMessageTemplates.All)
         {
-            langParam.Value = lang;
-            kindParam.Value = kind;
-            bodyParam.Value = body;
+            langParam.Value = template.LanguageCode;
+            kindParam.Value = template.Kind.ToString();
+            bodyParam.Value = template.Body;
             insertCommand.ExecuteNonQuery();
         }
     }
-
-    private static readonly (string Lang, string Kind, string Body)[] DefaultTemplates =
-    {
-        ("en", "Request",
-            "Hi {{guest_first_name}}, welcome to {{apartment_name}}! Could you please send us your license plate number and a 4-digit PIN code you'd like to use, before your arrival on {{arrival_date}}? Thank you!"),
-        ("en", "Clarification",
-            "Hi {{guest_first_name}}, sorry, we couldn't quite make out your license plate and PIN from your last message. Could you send them again, clearly, e.g. \"Plate: AB-123-C, PIN: 4821\"?"),
-        ("en", "Confirmation",
-            "Thanks {{guest_first_name}}, we've got your license plate and PIN - you're all set for your arrival on {{arrival_date}}!"),
-
-        ("nl", "Request",
-            "Hallo {{guest_first_name}}, welkom bij {{apartment_name}}! Zou u ons vóór uw aankomst op {{arrival_date}} uw kenteken en een 4-cijferige pincode willen doorgeven? Alvast bedankt!"),
-        ("nl", "Clarification",
-            "Hallo {{guest_first_name}}, we konden het kenteken en de pincode uit uw vorige bericht niet goed lezen. Zou u ze nogmaals duidelijk willen doorgeven, bijvoorbeeld \"Kenteken: AB-123-C, pincode: 4821\"?"),
-        ("nl", "Confirmation",
-            "Bedankt {{guest_first_name}}, we hebben uw kenteken en pincode ontvangen - u bent helemaal klaar voor uw aankomst op {{arrival_date}}!"),
-
-        ("de", "Request",
-            "Hallo {{guest_first_name}}, willkommen bei {{apartment_name}}! Könnten Sie uns vor Ihrer Ankunft am {{arrival_date}} bitte Ihr Kennzeichen und einen 4-stelligen PIN-Code mitteilen? Vielen Dank!"),
-        ("de", "Clarification",
-            "Hallo {{guest_first_name}}, wir konnten Ihr Kennzeichen und Ihren PIN-Code aus Ihrer letzten Nachricht leider nicht eindeutig entnehmen. Könnten Sie beides bitte noch einmal klar mitteilen, z. B. \"Kennzeichen: AB-123-C, PIN: 4821\"?"),
-        ("de", "Confirmation",
-            "Danke {{guest_first_name}}, wir haben Ihr Kennzeichen und Ihren PIN-Code erhalten - für Ihre Ankunft am {{arrival_date}} ist alles bereit!"),
-
-        ("fr", "Request",
-            "Bonjour {{guest_first_name}}, bienvenue à {{apartment_name}} ! Pourriez-vous nous communiquer votre plaque d'immatriculation et un code PIN à 4 chiffres avant votre arrivée le {{arrival_date}} ? Merci !"),
-        ("fr", "Clarification",
-            "Bonjour {{guest_first_name}}, nous n'avons pas pu lire clairement votre plaque d'immatriculation et votre code PIN dans votre dernier message. Pourriez-vous nous les renvoyer clairement, par exemple \"Plaque : AB-123-C, PIN : 4821\" ?"),
-        ("fr", "Confirmation",
-            "Merci {{guest_first_name}}, nous avons bien reçu votre plaque d'immatriculation et votre code PIN - tout est prêt pour votre arrivée le {{arrival_date}} !"),
-    };
 
     private static void AddColumnIfMissing(SqliteConnection connection, string table, string column, string columnDefinition)
     {
