@@ -16,6 +16,7 @@ using UnifiSmoobuTool.Infrastructure.Notifications;
 using UnifiSmoobuTool.Infrastructure.Persistence;
 using UnifiSmoobuTool.Infrastructure.Security;
 using UnifiSmoobuTool.Infrastructure.Smoobu;
+using UnifiSmoobuTool.Infrastructure.Startup;
 using UnifiSmoobuTool.Infrastructure.UnifiAccess;
 using UnifiSmoobuTool.Infrastructure.Updates;
 
@@ -23,12 +24,23 @@ namespace UnifiSmoobuTool.App;
 
 public partial class App : System.Windows.Application
 {
+    private const string MainWindowTitle = "UniFi Access - Smoobu Guest Access Tool";
+
     private IHost? _host;
     private System.Windows.Forms.NotifyIcon? _trayIcon;
+    private SingleInstanceGuard? _singleInstanceGuard;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _singleInstanceGuard = new SingleInstanceGuard();
+        if (!_singleInstanceGuard.IsFirstInstance)
+        {
+            SingleInstanceGuard.ActivateExistingInstance(MainWindowTitle);
+            System.Windows.Application.Current.Shutdown();
+            return;
+        }
 
         var appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "UnifiSmoobuTool");
         Directory.CreateDirectory(appDataDir);
@@ -183,6 +195,7 @@ public partial class App : System.Windows.Application
         }
 
         Log.CloseAndFlush();
+        _singleInstanceGuard?.Dispose();
         base.OnExit(e);
     }
 }

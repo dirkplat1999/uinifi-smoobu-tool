@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- The app now refuses to open a second copy of itself - launching it again while it's already
+  running just brings the existing window to the front instead of starting a duplicate instance.
+
 ## 1.2.0
 
 - Guest messaging can now be turned on/off per booking channel (Airbnb, Booking.com, Direct, ...) -
