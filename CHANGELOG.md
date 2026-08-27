@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2
+
+- Fixed: the Trigger, Method, and Apartment dropdowns on the Automation Webhooks screen (and the
+  Method dropdown for error webhooks in Settings) were always empty due to a WPF data-binding bug
+  in the grid columns - they now populate and can be selected.
+
 ## 1.2.1
 
 - The app now refuses to open a second copy of itself - launching it again while it's already

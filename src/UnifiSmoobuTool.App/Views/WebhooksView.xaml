@@ -22,15 +22,31 @@
                   AutoGenerateColumns="False" CanUserAddRows="False">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
-                <DataGridComboBoxColumn Header="Apartment" Width="140"
-                                         ItemsSource="{Binding DataContext.Apartments, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                         SelectedValueBinding="{Binding ApartmentId}" SelectedValuePath="Id" DisplayMemberPath="Name"/>
-                <DataGridComboBoxColumn Header="Trigger" Width="140"
-                                         ItemsSource="{Binding DataContext.TriggerOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                         SelectedItemBinding="{Binding Trigger}"/>
-                <DataGridComboBoxColumn Header="Method" Width="80"
-                                         ItemsSource="{Binding DataContext.MethodOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                         SelectedItemBinding="{Binding Method}"/>
+                <DataGridTemplateColumn Header="Apartment" Width="140">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding DataContext.Apartments, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                      SelectedValue="{Binding ApartmentId, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Margin="2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Trigger" Width="140">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding DataContext.TriggerOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                      SelectedItem="{Binding Trigger, UpdateSourceTrigger=PropertyChanged}" Margin="2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Method" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding DataContext.MethodOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                      SelectedItem="{Binding Method, UpdateSourceTrigger=PropertyChanged}" Margin="2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn Header="URL" Binding="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Width="2*"/>
                 <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled}" Width="60"/>
                 <DataGridTemplateColumn Header="" Width="140">

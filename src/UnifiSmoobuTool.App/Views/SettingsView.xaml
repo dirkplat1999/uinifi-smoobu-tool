@@ -111,9 +111,14 @@
                         <DataGrid ItemsSource="{Binding ErrorWebhooks}" AutoGenerateColumns="False" CanUserAddRows="False" MinHeight="140">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
-                                <DataGridComboBoxColumn Header="Method" Width="80"
-                                                         ItemsSource="{Binding DataContext.MethodOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                         SelectedItemBinding="{Binding Method}"/>
+                                <DataGridTemplateColumn Header="Method" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ComboBox ItemsSource="{Binding DataContext.MethodOptions, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                      SelectedItem="{Binding Method, UpdateSourceTrigger=PropertyChanged}" Margin="2"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="URL" Binding="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Width="2*"/>
                                 <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled}" Width="60"/>
                                 <DataGridTemplateColumn Header="" Width="140">
