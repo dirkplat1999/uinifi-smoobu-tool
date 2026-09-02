@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1
+
+- Fixed: every dropdown list in the app (Method, Trigger, Apartment, Language, Kind, ...) rendered
+  its options with invisible text, making them look empty when opened - a global styling bug where
+  the dropdown popup didn't inherit the app's text color. All dropdown options are visible again.
+
 ## 1.3.0
 
 - New "Manual Bookings" tab for guests entered by hand (no Smoobu listing) - they flow through the
