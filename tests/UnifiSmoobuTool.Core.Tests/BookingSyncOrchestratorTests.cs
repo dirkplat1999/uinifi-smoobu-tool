@@ -19,6 +19,8 @@ public class BookingSyncOrchestratorTests
         public InMemoryWebhookConfigStore Webhooks { get; } = new();
         public InMemoryTestModeRuleStore TestModeRules { get; } = new();
         public InMemoryChannelMessagingSettingsStore ChannelSettings { get; } = new();
+        public InMemoryManualBookingStore ManualBookings { get; } = new();
+        public FakeGuestEmailSender GuestEmailSender { get; } = new();
         public FakeWebhookSender WebhookSender { get; } = new();
         public FakeErrorNotifier ErrorNotifier { get; } = new();
 
@@ -49,6 +51,7 @@ public class BookingSyncOrchestratorTests
 
         public BookingSyncOrchestrator BuildOrchestrator() => new(
             Smoobu, Unifi, States, Settings, Templates, Mappings, Webhooks, TestModeRules, ChannelSettings,
+            ManualBookings, GuestEmailSender,
             new WebhookDispatcher(WebhookSender), ErrorNotifier, Clock,
             NullLogger<BookingSyncOrchestrator>.Instance,
             TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time"));
@@ -342,5 +345,106 @@ public class BookingSyncOrchestratorTests
         Assert.Single(h.Smoobu.SentMessages);
         var state = await h.States.GetAsync(1);
         Assert.NotNull(state!.RequestMessageSentAt);
+    }
+
+    private static async Task<long> AddManualBookingAsync(Harness h, DateOnly arrival, DateOnly departure) =>
+        await h.ManualBookings.AddAsync(new ManualBooking
+        {
+            Id = 0,
+            ApartmentId = 1,
+            ApartmentName = "Canal View",
+            GuestFirstName = "Jamie",
+            GuestLastName = "Rivera",
+            GuestEmail = "jamie@example.com",
+            GuestLanguage = "en",
+            Arrival = arrival,
+            Departure = departure,
+        });
+
+    [Fact]
+    public async Task RunOnceAsync_EmailsManualBooking_AndAlwaysFlagsItForManualReview()
+    {
+        var h = new Harness();
+        h.Settings.Settings.Smtp = new SmtpSettings { Host = "smtp.example.com", FromAddress = "host@example.com", ToAddress = "host@example.com" };
+        var today = DateOnly.FromDateTime(h.Clock.UtcNow.UtcDateTime);
+        var bookingId = await AddManualBookingAsync(h, today.AddDays(3), today.AddDays(6));
+
+        await h.BuildOrchestrator().RunOnceAsync();
+
+        Assert.Empty(h.Smoobu.SentMessages);
+        var sentEmail = Assert.Single(h.GuestEmailSender.Sent);
+        Assert.Equal("jamie@example.com", sentEmail.ToAddress);
+        Assert.Contains("Jamie", sentEmail.Body, StringComparison.Ordinal);
+        Assert.False(string.IsNullOrWhiteSpace(sentEmail.Subject));
+
+        var reservationId = ManualBookingReservationId.ToReservationId(bookingId);
+        var state = await h.States.GetAsync(reservationId);
+        Assert.NotNull(state!.RequestMessageSentAt);
+        Assert.True(state.NeedsManualReview);
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_DoesNotEmailManualBooking_WithoutSmtpConfigured()
+    {
+        var h = new Harness();
+        var today = DateOnly.FromDateTime(h.Clock.UtcNow.UtcDateTime);
+        await AddManualBookingAsync(h, today.AddDays(3), today.AddDays(6));
+
+        await h.BuildOrchestrator().RunOnceAsync();
+
+        Assert.Empty(h.GuestEmailSender.Sent);
+    }
+
+    [Fact]
+    public async Task ApproveManualReviewAsync_WorksForAManualBooking_AndProvisionsAccess()
+    {
+        var h = new Harness();
+        h.Settings.Settings.Smtp = new SmtpSettings { Host = "smtp.example.com", FromAddress = "host@example.com", ToAddress = "host@example.com" };
+        h.Mappings.Mappings.Add(new ApartmentAccessMapping
+        {
+            SmoobuApartmentId = 1,
+            ApartmentName = "Canal View",
+            UnifiResources = { new UnifiResourceRef { Id = "door-1", Name = "Front Door", Type = "door" } },
+        });
+        var today = DateOnly.FromDateTime(h.Clock.UtcNow.UtcDateTime);
+        var bookingId = await AddManualBookingAsync(h, today.AddDays(3), today.AddDays(6));
+
+        var orchestrator = h.BuildOrchestrator();
+        await orchestrator.RunOnceAsync();
+
+        var reservationId = ManualBookingReservationId.ToReservationId(bookingId);
+        await orchestrator.ApproveManualReviewAsync(reservationId, "AB-123-C", "4821");
+
+        var visitor = Assert.Single(h.Unifi.Visitors);
+        Assert.Equal("Jamie", visitor.Request.FirstName);
+        Assert.Equal("4821", visitor.PinCode);
+        Assert.Equal(new[] { "AB123C" }, visitor.LicensePlates);
+
+        var state = await h.States.GetAsync(reservationId);
+        Assert.False(state!.NeedsManualReview);
+        Assert.NotNull(state.AccessCreatedAt);
+    }
+
+    [Fact]
+    public async Task RunOnceAsync_RevokesAccess_ForCancelledManualBooking()
+    {
+        var h = new Harness();
+        h.Settings.Settings.Smtp = new SmtpSettings { Host = "smtp.example.com", FromAddress = "host@example.com", ToAddress = "host@example.com" };
+        var today = DateOnly.FromDateTime(h.Clock.UtcNow.UtcDateTime);
+        var bookingId = await AddManualBookingAsync(h, today.AddDays(3), today.AddDays(6));
+
+        var orchestrator = h.BuildOrchestrator();
+        await orchestrator.RunOnceAsync();
+        var reservationId = ManualBookingReservationId.ToReservationId(bookingId);
+        await orchestrator.ApproveManualReviewAsync(reservationId, "AB123C", "4821");
+
+        var visitorId = h.Unifi.Visitors.Single().Id;
+        await h.ManualBookings.SetCancelledAsync(bookingId, true);
+
+        await orchestrator.RunOnceAsync();
+
+        Assert.True(h.Unifi.Visitors.Single(v => v.Id == visitorId).Deleted);
+        var state = await h.States.GetAsync(reservationId);
+        Assert.NotNull(state!.AccessRevokedAt);
     }
 }

@@ -25,12 +25,16 @@ public sealed partial class TemplateRowViewModel : ObservableObject
     private MessageTemplateKind _kind;
 
     [ObservableProperty]
+    private string _subject;
+
+    [ObservableProperty]
     private string _body;
 
-    public TemplateRowViewModel(string languageCode, MessageTemplateKind kind, string body)
+    public TemplateRowViewModel(string languageCode, MessageTemplateKind kind, string subject, string body)
     {
         _languageCode = languageCode;
         _kind = kind;
+        _subject = subject;
         _body = body;
     }
 
@@ -76,10 +80,11 @@ public sealed partial class TemplatesViewModel : ObservableObject
     public MessageTemplateKind[] KindOptions { get; } = Enum.GetValues<MessageTemplateKind>();
 
     public string PlaceholderHelp =>
-        "Available placeholders: {{guest_first_name}}, {{guest_last_name}}, {{guest_full_name}}, " +
-        "{{apartment_name}}, {{arrival_date}}, {{departure_date}}, {{reservation_id}}. " +
-        "Request is the initial arrival ask, Clarification is auto-sent when a reply can't be read " +
-        "clearly, Confirmation is auto-sent when it can.";
+        "Available placeholders (subject and body both support them): {{guest_first_name}}, {{guest_last_name}}, " +
+        "{{guest_full_name}}, {{apartment_name}}, {{arrival_date}}, {{departure_date}}, {{reservation_id}}. " +
+        "Request is the initial arrival ask, Clarification is auto-sent when a reply can't be read clearly, " +
+        "Confirmation is auto-sent when it can. Subject is only used for manual bookings (emailed instead of " +
+        "sent through Smoobu).";
 
     public TemplatesViewModel(IMessageTemplateStore templateStore)
     {
@@ -97,7 +102,7 @@ public sealed partial class TemplatesViewModel : ObservableObject
             Templates.Clear();
             foreach (var template in templates.OrderBy(t => t.LanguageCode).ThenBy(t => t.Kind))
             {
-                Templates.Add(new TemplateRowViewModel(template.LanguageCode, template.Kind, template.Body));
+                Templates.Add(new TemplateRowViewModel(template.LanguageCode, template.Kind, template.Subject ?? "", template.Body));
             }
             StatusMessage = $"Loaded {templates.Count} template(s).";
         }
@@ -130,7 +135,8 @@ public sealed partial class TemplatesViewModel : ObservableObject
 
         var body = DefaultMessageTemplates.TryGetBody(code, NewKind)
             ?? "Hi {{guest_first_name}}, could you send us your license plate and a 4-digit PIN before arrival?";
-        var row = new TemplateRowViewModel(code, NewKind, body);
+        var subject = DefaultMessageTemplates.TryGetSubject(code, NewKind) ?? "";
+        var row = new TemplateRowViewModel(code, NewKind, subject, body);
         Templates.Add(row);
         SelectedTemplate = row;
         NewCustomLanguageCode = "";
@@ -145,7 +151,13 @@ public sealed partial class TemplatesViewModel : ObservableObject
         {
             foreach (var row in Templates)
             {
-                await _templateStore.SaveAsync(new MessageTemplate { LanguageCode = row.LanguageCode, Kind = row.Kind, Body = row.Body });
+                await _templateStore.SaveAsync(new MessageTemplate
+                {
+                    LanguageCode = row.LanguageCode,
+                    Kind = row.Kind,
+                    Subject = string.IsNullOrWhiteSpace(row.Subject) ? null : row.Subject,
+                    Body = row.Body,
+                });
             }
             StatusMessage = "Templates saved.";
         }
@@ -177,6 +189,29 @@ public sealed partial class TemplatesViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Couldn't delete template: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>Discards every template (including custom edits and any extra languages added) and
+    /// re-seeds the built-in en/nl/de/fr defaults - the confirmation happens in the view, since this
+    /// is destructive and can't be undone.</summary>
+    [RelayCommand]
+    private async Task ResetToDefaultsAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            await _templateStore.ResetToDefaultsAsync();
+            await LoadAsync();
+            StatusMessage = "All templates were reset to the built-in defaults.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Couldn't reset templates: {ex.Message}";
         }
         finally
         {

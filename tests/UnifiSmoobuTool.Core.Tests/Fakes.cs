@@ -136,6 +136,13 @@ internal sealed class InMemoryMessageTemplateStore : IMessageTemplateStore
         Templates.RemoveAll(t => t.LanguageCode == languageCode && t.Kind == kind);
         return Task.CompletedTask;
     }
+
+    public Task ResetToDefaultsAsync(CancellationToken ct = default)
+    {
+        Templates.Clear();
+        Templates.AddRange(UnifiSmoobuTool.Core.Services.DefaultMessageTemplates.All);
+        return Task.CompletedTask;
+    }
 }
 
 internal sealed class InMemoryApartmentMappingStore : IApartmentMappingStore
@@ -228,6 +235,53 @@ internal sealed class InMemoryChannelMessagingSettingsStore : IChannelMessagingS
         {
             Settings.Add(new ChannelMessagingSetting { ChannelName = channelName, Enabled = true });
         }
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class InMemoryManualBookingStore : IManualBookingStore
+{
+    public List<ManualBooking> Bookings { get; } = new();
+    private long _nextId = 1;
+
+    public Task<IReadOnlyList<ManualBooking>> GetAllAsync(CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<ManualBooking>>(Bookings);
+
+    public Task<ManualBooking?> GetAsync(long id, CancellationToken ct = default)
+        => Task.FromResult(Bookings.FirstOrDefault(b => b.Id == id));
+
+    public Task<long> AddAsync(ManualBooking booking, CancellationToken ct = default)
+    {
+        var id = _nextId++;
+        Bookings.Add(booking with { Id = id });
+        return Task.FromResult(id);
+    }
+
+    public Task UpdateAsync(ManualBooking booking, CancellationToken ct = default)
+    {
+        Bookings.RemoveAll(b => b.Id == booking.Id);
+        Bookings.Add(booking);
+        return Task.CompletedTask;
+    }
+
+    public Task SetCancelledAsync(long id, bool cancelled, CancellationToken ct = default)
+    {
+        var index = Bookings.FindIndex(b => b.Id == id);
+        if (index >= 0)
+        {
+            Bookings[index] = Bookings[index] with { Cancelled = cancelled };
+        }
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeGuestEmailSender : IGuestEmailSender
+{
+    public List<(string ToAddress, string Subject, string Body)> Sent { get; } = new();
+
+    public Task SendAsync(SmtpSettings settings, string toAddress, string subject, string body, CancellationToken ct = default)
+    {
+        Sent.Add((toAddress, subject, body));
         return Task.CompletedTask;
     }
 }

@@ -2,11 +2,12 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using MimeKit;
+using UnifiSmoobuTool.Core.Abstractions;
 using UnifiSmoobuTool.Core.Models;
 
 namespace UnifiSmoobuTool.Infrastructure.Notifications;
 
-public sealed class SmtpAlerter
+public sealed class SmtpAlerter : IGuestEmailSender
 {
     private readonly ILogger<SmtpAlerter> _logger;
 
@@ -15,7 +16,16 @@ public sealed class SmtpAlerter
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task SendAsync(SmtpSettings settings, string subject, string body, CancellationToken ct = default)
+    /// <summary>Sends to the fixed alert inbox configured in <see cref="SmtpSettings.ToAddress"/>
+    /// (error alerts, test emails).</summary>
+    public Task SendAsync(SmtpSettings settings, string subject, string body, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return SendAsync(settings, settings.ToAddress, subject, body, ct);
+    }
+
+    /// <summary>Sends to an arbitrary recipient (guest-facing emails for manual bookings).</summary>
+    public async Task SendAsync(SmtpSettings settings, string toAddress, string subject, string body, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
@@ -23,7 +33,7 @@ public sealed class SmtpAlerter
         {
             var message = new MimeMessage();
             message.From.Add(MailboxAddress.Parse(settings.FromAddress));
-            message.To.Add(MailboxAddress.Parse(settings.ToAddress));
+            message.To.Add(MailboxAddress.Parse(toAddress));
             message.Subject = subject;
             message.Body = new TextPart("plain") { Text = body };
 
@@ -41,7 +51,7 @@ public sealed class SmtpAlerter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send SMTP alert email.");
+            _logger.LogError(ex, "Failed to send email to {ToAddress}.", toAddress);
         }
     }
 }

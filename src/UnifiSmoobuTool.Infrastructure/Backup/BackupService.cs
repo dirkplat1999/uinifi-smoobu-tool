@@ -22,6 +22,7 @@ public sealed class BackupService
     private readonly IApartmentMappingStore _mappingStore;
     private readonly ITestModeRuleStore _testModeStore;
     private readonly IChannelMessagingSettingsStore _channelSettingsStore;
+    private readonly IManualBookingStore _manualBookingStore;
 
     public BackupService(
         IAppSettingsStore settingsStore,
@@ -29,7 +30,8 @@ public sealed class BackupService
         IWebhookConfigStore webhookStore,
         IApartmentMappingStore mappingStore,
         ITestModeRuleStore testModeStore,
-        IChannelMessagingSettingsStore channelSettingsStore)
+        IChannelMessagingSettingsStore channelSettingsStore,
+        IManualBookingStore manualBookingStore)
     {
         _settingsStore = settingsStore ?? throw new ArgumentNullException(nameof(settingsStore));
         _templateStore = templateStore ?? throw new ArgumentNullException(nameof(templateStore));
@@ -37,6 +39,7 @@ public sealed class BackupService
         _mappingStore = mappingStore ?? throw new ArgumentNullException(nameof(mappingStore));
         _testModeStore = testModeStore ?? throw new ArgumentNullException(nameof(testModeStore));
         _channelSettingsStore = channelSettingsStore ?? throw new ArgumentNullException(nameof(channelSettingsStore));
+        _manualBookingStore = manualBookingStore ?? throw new ArgumentNullException(nameof(manualBookingStore));
     }
 
     public async Task ExportAsync(string filePath, bool includeCredentials, string? passphrase, CancellationToken ct = default)
@@ -53,6 +56,7 @@ public sealed class BackupService
         var mappings = await _mappingStore.GetAllAsync(ct).ConfigureAwait(false);
         var rules = await _testModeStore.GetAllAsync(ct).ConfigureAwait(false);
         var channelSettings = await _channelSettingsStore.GetAllAsync(ct).ConfigureAwait(false);
+        var manualBookings = await _manualBookingStore.GetAllAsync(ct).ConfigureAwait(false);
 
         // Scrub credentials from the plain settings export; they only ever appear (encrypted) in
         // secrets.enc, and only when the caller opted in.
@@ -90,6 +94,7 @@ public sealed class BackupService
         await WriteJsonEntryAsync(zip, "apartment-mappings.json", mappings, ct).ConfigureAwait(false);
         await WriteJsonEntryAsync(zip, "test-mode-rules.json", rules, ct).ConfigureAwait(false);
         await WriteJsonEntryAsync(zip, "channel-messaging-settings.json", channelSettings, ct).ConfigureAwait(false);
+        await WriteJsonEntryAsync(zip, "manual-bookings.json", manualBookings, ct).ConfigureAwait(false);
 
         if (includeCredentials)
         {
@@ -129,6 +134,7 @@ public sealed class BackupService
         var mappings = await ReadJsonEntryAsync<List<ApartmentAccessMapping>>(zip, "apartment-mappings.json", ct).ConfigureAwait(false) ?? new();
         var rules = await ReadJsonEntryAsync<List<TestModeRule>>(zip, "test-mode-rules.json", ct).ConfigureAwait(false) ?? new();
         var channelSettings = await ReadJsonEntryAsync<List<ChannelMessagingSetting>>(zip, "channel-messaging-settings.json", ct).ConfigureAwait(false) ?? new();
+        var manualBookings = await ReadJsonEntryAsync<List<ManualBooking>>(zip, "manual-bookings.json", ct).ConfigureAwait(false) ?? new();
 
         return new BackupPreview
         {
@@ -140,6 +146,7 @@ public sealed class BackupService
             ApartmentMappingCount = mappings.Count,
             TestModeRuleCount = rules.Count,
             ChannelSettingCount = channelSettings.Count,
+            ManualBookingCount = manualBookings.Count,
         };
     }
 
@@ -223,6 +230,15 @@ public sealed class BackupService
         foreach (var channelSetting in channelSettings)
         {
             await _channelSettingsStore.SaveAsync(channelSetting, ct).ConfigureAwait(false);
+        }
+
+        // Manual bookings have no natural key to upsert on, so importing always adds new rows -
+        // fine for restoring into a fresh database, but re-importing the same backup into the
+        // original one will duplicate them.
+        var manualBookings = await ReadJsonEntryAsync<List<ManualBooking>>(zip, "manual-bookings.json", ct).ConfigureAwait(false) ?? new();
+        foreach (var booking in manualBookings)
+        {
+            await _manualBookingStore.AddAsync(booking, ct).ConfigureAwait(false);
         }
     }
 

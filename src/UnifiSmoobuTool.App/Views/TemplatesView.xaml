@@ -26,7 +26,8 @@
                     </StackPanel>
                     <TextBox Text="{Binding NewCustomLanguageCode, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"
                              ToolTip="Only used when &quot;Custom...&quot; is selected above, e.g. es, it, pl"/>
-                    <Button Content="Add template" Command="{Binding AddCommand}" Padding="10,4" HorizontalAlignment="Left"/>
+                    <Button Content="Add template" Command="{Binding AddCommand}" Padding="10,4" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                    <Button Content="Reset all to defaults..." Click="ResetToDefaultsButton_Click" Padding="10,4" HorizontalAlignment="Left"/>
                 </StackPanel>
                 <ListBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" DisplayMemberPath="DisplayName"/>
             </DockPanel>
@@ -36,6 +37,9 @@
                     <Button Content="Save All" Command="{Binding SaveCommand}" Padding="10,4" Margin="0,0,8,0"/>
                     <Button Content="Delete Selected" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedTemplate}" Padding="10,4"/>
                 </StackPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Subject (only used when emailed for a manual booking)" Margin="0,0,0,2"/>
+                <TextBox DockPanel.Dock="Top" Text="{Binding SelectedTemplate.Subject, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                <TextBlock DockPanel.Dock="Top" Text="Body" Margin="0,0,0,2"/>
                 <TextBox Text="{Binding SelectedTemplate.Body, UpdateSourceTrigger=PropertyChanged}"
                          AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
             </DockPanel>

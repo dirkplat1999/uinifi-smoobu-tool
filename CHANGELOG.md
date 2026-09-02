@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+- New "Manual Bookings" tab for guests entered by hand (no Smoobu listing) - they flow through the
+  same access-provisioning pipeline, with the guest-info request emailed instead of sent through
+  Smoobu, and every reply routed to the Dashboard's Pending Review list since an email reply can't
+  be detected automatically.
+- Message templates now have a Subject line (used only for the emailed manual-booking messages),
+  and a "Reset all to defaults..." button on the Message Templates screen restores the full
+  built-in English/Dutch/German/French set.
+
 ## 1.2.2
 
 - Fixed: the Trigger, Method, and Apartment dropdowns on the Automation Webhooks screen (and the

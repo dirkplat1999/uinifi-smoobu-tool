@@ -41,6 +41,7 @@ public sealed class SqliteConnectionFactory
         AddColumnIfMissing(connection, "reservation_state", "confirmation_sent_at", "TEXT NULL");
         AddColumnIfMissing(connection, "reservation_state", "messaging_override_enabled", "INTEGER NOT NULL DEFAULT 0");
         MigrateMessageTemplatesTable(connection);
+        AddColumnIfMissing(connection, "message_templates", "subject", "TEXT NULL");
     }
 
     /// <summary>Seeds Request/Clarification/Confirmation templates for English, Dutch, German, and
@@ -102,13 +103,16 @@ public sealed class SqliteConnectionFactory
         }
 
         using var insertCommand = connection.CreateCommand();
-        insertCommand.CommandText = "INSERT INTO message_templates (language_code, kind, body) VALUES (@lang, @kind, @body)";
+        insertCommand.CommandText = "INSERT INTO message_templates (language_code, kind, subject, body) VALUES (@lang, @kind, @subject, @body)";
         var langParam = insertCommand.CreateParameter();
         langParam.ParameterName = "@lang";
         insertCommand.Parameters.Add(langParam);
         var kindParam = insertCommand.CreateParameter();
         kindParam.ParameterName = "@kind";
         insertCommand.Parameters.Add(kindParam);
+        var subjectParam = insertCommand.CreateParameter();
+        subjectParam.ParameterName = "@subject";
+        insertCommand.Parameters.Add(subjectParam);
         var bodyParam = insertCommand.CreateParameter();
         bodyParam.ParameterName = "@body";
         insertCommand.Parameters.Add(bodyParam);
@@ -117,6 +121,7 @@ public sealed class SqliteConnectionFactory
         {
             langParam.Value = template.LanguageCode;
             kindParam.Value = template.Kind.ToString();
+            subjectParam.Value = (object?)template.Subject ?? DBNull.Value;
             bodyParam.Value = template.Body;
             insertCommand.ExecuteNonQuery();
         }
@@ -183,6 +188,7 @@ public sealed class SqliteConnectionFactory
         CREATE TABLE IF NOT EXISTS message_templates (
             language_code TEXT NOT NULL,
             kind TEXT NOT NULL DEFAULT 'Request',
+            subject TEXT NULL,
             body TEXT NOT NULL,
             PRIMARY KEY (language_code, kind)
         );
@@ -213,6 +219,19 @@ public sealed class SqliteConnectionFactory
         CREATE TABLE IF NOT EXISTS channel_messaging_settings (
             channel_name TEXT PRIMARY KEY,
             enabled INTEGER NOT NULL DEFAULT 1
+        );
+
+        CREATE TABLE IF NOT EXISTS manual_bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            apartment_id INTEGER NOT NULL,
+            apartment_name TEXT NOT NULL,
+            guest_first_name TEXT NOT NULL,
+            guest_last_name TEXT NOT NULL,
+            guest_email TEXT NOT NULL,
+            guest_language TEXT NULL,
+            arrival TEXT NOT NULL,
+            departure TEXT NOT NULL,
+            cancelled INTEGER NOT NULL DEFAULT 0
         );
         """;
 }

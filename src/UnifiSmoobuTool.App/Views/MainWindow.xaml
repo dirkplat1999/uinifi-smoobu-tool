@@ -31,6 +31,9 @@
             <TabItem Header="Apartments">
                 <views:ApartmentsView x:Name="ApartmentsViewControl"/>
             </TabItem>
+            <TabItem Header="Manual Bookings">
+                <views:ManualBookingsView x:Name="ManualBookingsViewControl"/>
+            </TabItem>
             <TabItem Header="Message Templates">
                 <views:TemplatesView x:Name="TemplatesViewControl"/>
             </TabItem>

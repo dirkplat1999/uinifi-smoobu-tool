@@ -130,6 +130,31 @@ public class SqlitePersistenceTests : IDisposable
     }
 
     [Fact]
+    public async Task MessageTemplateStore_RoundTripsSubject()
+    {
+        var store = new SqliteMessageTemplateStore(_factory);
+        await store.SaveAsync(new MessageTemplate { LanguageCode = "en", Subject = "Your arrival", Body = "Hello" });
+
+        var loaded = (await store.GetAllAsync()).Single();
+        Assert.Equal("Your arrival", loaded.Subject);
+    }
+
+    [Fact]
+    public async Task MessageTemplateStore_ResetToDefaultsAsync_DiscardsCustomTemplates()
+    {
+        var store = new SqliteMessageTemplateStore(_factory);
+        await store.SaveAsync(new MessageTemplate { LanguageCode = "es", Body = "Custom Spanish template" });
+        await store.SaveAsync(new MessageTemplate { LanguageCode = "en", Body = "Custom override" });
+
+        await store.ResetToDefaultsAsync();
+
+        var all = await store.GetAllAsync();
+        Assert.Equal(12, all.Count);
+        Assert.DoesNotContain(all, t => t.LanguageCode == "es");
+        Assert.NotEqual("Custom override", all.Single(t => t.LanguageCode == "en" && t.Kind == MessageTemplateKind.Request).Body);
+    }
+
+    [Fact]
     public async Task SeedDefaultTemplatesIfEmpty_SeedsFourLanguagesAndThreeKinds_OnlyWhenEmpty()
     {
         var store = new SqliteMessageTemplateStore(_factory);
@@ -249,5 +274,83 @@ public class SqlitePersistenceTests : IDisposable
     {
         var store = new SqliteChannelMessagingSettingsStore(_factory);
         Assert.Null(await store.GetAsync("Vrbo"));
+    }
+
+    [Fact]
+    public async Task ManualBookingStore_AddThenGet_RoundTripsAllFields()
+    {
+        var store = new SqliteManualBookingStore(_factory);
+        var booking = new ManualBooking
+        {
+            Id = 0,
+            ApartmentId = 3,
+            ApartmentName = "Garden Loft",
+            GuestFirstName = "Jamie",
+            GuestLastName = "Rivera",
+            GuestEmail = "jamie@example.com",
+            GuestLanguage = "nl",
+            Arrival = new DateOnly(2026, 9, 1),
+            Departure = new DateOnly(2026, 9, 5),
+        };
+
+        var id = await store.AddAsync(booking);
+        var loaded = await store.GetAsync(id);
+
+        Assert.NotNull(loaded);
+        Assert.Equal("Jamie", loaded!.GuestFirstName);
+        Assert.Equal("jamie@example.com", loaded.GuestEmail);
+        Assert.Equal("nl", loaded.GuestLanguage);
+        Assert.Equal(new DateOnly(2026, 9, 1), loaded.Arrival);
+        Assert.Equal(new DateOnly(2026, 9, 5), loaded.Departure);
+        Assert.False(loaded.Cancelled);
+    }
+
+    [Fact]
+    public async Task ManualBookingStore_SetCancelledAsync_UpdatesFlag()
+    {
+        var store = new SqliteManualBookingStore(_factory);
+        var id = await store.AddAsync(new ManualBooking
+        {
+            Id = 0,
+            ApartmentId = 1,
+            ApartmentName = "Canal View",
+            GuestFirstName = "Sam",
+            GuestLastName = "Guest",
+            GuestEmail = "sam@example.com",
+            Arrival = new DateOnly(2026, 9, 1),
+            Departure = new DateOnly(2026, 9, 4),
+        });
+
+        await store.SetCancelledAsync(id, true);
+
+        var loaded = await store.GetAsync(id);
+        Assert.True(loaded!.Cancelled);
+    }
+
+    [Fact]
+    public async Task ManualBookingStore_GetAsync_ReturnsNull_ForUnknownId()
+    {
+        var store = new SqliteManualBookingStore(_factory);
+        Assert.Null(await store.GetAsync(999));
+    }
+
+    [Fact]
+    public async Task ManualBookingStore_GetAllAsync_OrdersByArrival()
+    {
+        var store = new SqliteManualBookingStore(_factory);
+        await store.AddAsync(new ManualBooking
+        {
+            Id = 0, ApartmentId = 1, ApartmentName = "Canal View", GuestFirstName = "Later", GuestLastName = "Guest",
+            GuestEmail = "later@example.com", Arrival = new DateOnly(2026, 10, 1), Departure = new DateOnly(2026, 10, 4),
+        });
+        await store.AddAsync(new ManualBooking
+        {
+            Id = 0, ApartmentId = 1, ApartmentName = "Canal View", GuestFirstName = "Sooner", GuestLastName = "Guest",
+            GuestEmail = "sooner@example.com", Arrival = new DateOnly(2026, 9, 1), Departure = new DateOnly(2026, 9, 4),
+        });
+
+        var all = await store.GetAllAsync();
+        Assert.Equal("Sooner", all[0].GuestFirstName);
+        Assert.Equal("Later", all[1].GuestFirstName);
     }
 }

@@ -19,6 +19,12 @@ public sealed record Reservation
     public required DateOnly Departure { get; init; }
     public ReservationStatus Status { get; init; } = ReservationStatus.Confirmed;
 
+    /// <summary>Where this reservation came from. Manual reservations have no inbound messaging
+    /// channel - the guest-info request is emailed instead of sent via Smoobu, and since there's
+    /// no way to detect a reply automatically, they always land in the manual-review queue for the
+    /// host to fill in from the guest's actual email reply.</summary>
+    public ReservationSource Source { get; init; } = ReservationSource.Smoobu;
+
     public string GuestFullName => $"{GuestFirstName} {GuestLastName}".Trim();
 }
 
@@ -27,4 +33,10 @@ public enum ReservationStatus
     Confirmed,
     Cancelled,
     Tentative,
+}
+
+public enum ReservationSource
+{
+    Smoobu,
+    Manual,
 }

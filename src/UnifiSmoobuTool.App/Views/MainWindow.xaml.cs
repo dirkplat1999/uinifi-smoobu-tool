@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     public MainWindow(
         DashboardViewModel dashboardViewModel,
         ApartmentsViewModel apartmentsViewModel,
+        ManualBookingsViewModel manualBookingsViewModel,
         TemplatesViewModel templatesViewModel,
         WebhooksViewModel webhooksViewModel,
         TestModeViewModel testModeViewModel,
@@ -27,6 +28,7 @@ public partial class MainWindow : Window
 
         DashboardViewControl.DataContext = dashboardViewModel;
         ApartmentsViewControl.DataContext = apartmentsViewModel;
+        ManualBookingsViewControl.DataContext = manualBookingsViewModel;
         TemplatesViewControl.DataContext = templatesViewModel;
         WebhooksViewControl.DataContext = webhooksViewModel;
         TestModeViewControl.DataContext = testModeViewModel;
@@ -39,6 +41,7 @@ public partial class MainWindow : Window
             await settingsViewModel.LoadCommand.ExecuteAsync(null);
             await dashboardViewModel.RefreshCommand.ExecuteAsync(null);
             await apartmentsViewModel.RefreshFromSmoobuCommand.ExecuteAsync(null);
+            await manualBookingsViewModel.LoadCommand.ExecuteAsync(null);
             await templatesViewModel.LoadCommand.ExecuteAsync(null);
             await webhooksViewModel.LoadCommand.ExecuteAsync(null);
             await testModeViewModel.LoadCommand.ExecuteAsync(null);

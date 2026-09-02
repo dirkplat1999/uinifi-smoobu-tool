@@ -70,6 +70,7 @@ public partial class App : System.Windows.Application
         builder.Services.AddSingleton<IWebhookConfigStore, SqliteWebhookConfigStore>();
         builder.Services.AddSingleton<ITestModeRuleStore, SqliteTestModeRuleStore>();
         builder.Services.AddSingleton<IChannelMessagingSettingsStore, SqliteChannelMessagingSettingsStore>();
+        builder.Services.AddSingleton<IManualBookingStore, SqliteManualBookingStore>();
 
         builder.Services.AddHttpClient<ISmoobuClient, SmoobuApiClient>();
         builder.Services.AddSingleton<IUnifiAccessClient, UnifiAccessApiClient>();
@@ -77,6 +78,7 @@ public partial class App : System.Windows.Application
 
         builder.Services.AddSingleton<WebhookDispatcher>();
         builder.Services.AddSingleton<SmtpAlerter>();
+        builder.Services.AddSingleton<IGuestEmailSender>(sp => sp.GetRequiredService<SmtpAlerter>());
         builder.Services.AddSingleton<IErrorNotifier, CompositeErrorNotifier>();
         builder.Services.AddSingleton<BookingSyncOrchestrator>();
         builder.Services.AddSingleton<BackupService>();
@@ -86,6 +88,7 @@ public partial class App : System.Windows.Application
 
         builder.Services.AddSingleton<DashboardViewModel>();
         builder.Services.AddSingleton<ApartmentsViewModel>();
+        builder.Services.AddSingleton<ManualBookingsViewModel>();
         builder.Services.AddSingleton<TemplatesViewModel>();
         builder.Services.AddSingleton<WebhooksViewModel>();
         builder.Services.AddSingleton<TestModeViewModel>();

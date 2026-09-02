@@ -17,6 +17,7 @@ public sealed class BackupPreview
     public required int ApartmentMappingCount { get; init; }
     public required int TestModeRuleCount { get; init; }
     public required int ChannelSettingCount { get; init; }
+    public required int ManualBookingCount { get; init; }
 }
 
 internal sealed class ProtectedSecrets

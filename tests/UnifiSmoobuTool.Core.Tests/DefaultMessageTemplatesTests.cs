@@ -17,7 +17,16 @@ public class DefaultMessageTemplatesTests
         {
             var body = DefaultMessageTemplates.TryGetBody(languageCode, kind);
             Assert.False(string.IsNullOrWhiteSpace(body));
+
+            var subject = DefaultMessageTemplates.TryGetSubject(languageCode, kind);
+            Assert.False(string.IsNullOrWhiteSpace(subject));
         }
+    }
+
+    [Fact]
+    public void TryGetSubject_ReturnsNull_ForUnknownLanguage()
+    {
+        Assert.Null(DefaultMessageTemplates.TryGetSubject("es", MessageTemplateKind.Request));
     }
 
     [Fact]

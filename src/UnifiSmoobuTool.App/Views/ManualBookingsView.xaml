@@ -1,0 +1,73 @@
+<UserControl x:Class="UnifiSmoobuTool.App.Views.ManualBookingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.8"
+                   Text="Guests entered here have no Smoobu listing. The guest-info request is emailed automatically (per the lead-days setting in Settings), and since there's no way to detect an email reply automatically, every manual booking always shows up in the Dashboard's Pending Review list - fill in the plate/PIN there once the guest replies to the email."/>
+        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" Margin="0,0,0,8" TextWrapping="Wrap" Opacity="0.8"/>
+
+        <GroupBox Grid.Row="2" Header="Add a manual booking" Margin="0,0,0,12" Padding="8">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="First name" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding NewGuestFirstName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Email" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding NewGuestEmail, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Apartment" Margin="0,0,0,2"/>
+                        <ComboBox ItemsSource="{Binding Apartments}" SelectedItem="{Binding NewApartment}"
+                                  DisplayMemberPath="Name" Margin="0,0,0,8"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Last name" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding NewGuestLastName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Language (e.g. en, nl, de - optional)" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding NewGuestLanguage, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                        <StackPanel Orientation="Horizontal">
+                            <StackPanel Margin="0,0,16,0">
+                                <TextBlock Text="Arrival" Margin="0,0,0,2"/>
+                                <DatePicker SelectedDate="{Binding NewArrival}" Width="130"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Departure" Margin="0,0,0,2"/>
+                                <DatePicker SelectedDate="{Binding NewDeparture}" Width="130"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+                <Button Content="Add booking" Command="{Binding AddCommand}" Padding="10,4" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <DataGrid Grid.Row="3" ItemsSource="{Binding Bookings}" AutoGenerateColumns="False" CanUserAddRows="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Guest" Binding="{Binding GuestFirstName}" Width="120" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Email" Binding="{Binding GuestEmail}" Width="180" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Apartment" Binding="{Binding ApartmentName}" Width="140" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Arrival" Binding="{Binding Arrival, StringFormat='dd-MM-yyyy'}" Width="100" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Departure" Binding="{Binding Departure, StringFormat='dd-MM-yyyy'}" Width="100" IsReadOnly="True"/>
+                <DataGridTemplateColumn Header="Cancelled" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding Cancelled, Mode=TwoWay}"
+                                      Command="{Binding DataContext.ToggleCancelledCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                      CommandParameter="{Binding}" HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

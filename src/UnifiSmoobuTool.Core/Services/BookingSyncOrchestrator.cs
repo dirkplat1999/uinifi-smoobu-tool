@@ -22,6 +22,8 @@ public sealed class BookingSyncOrchestrator
     private readonly IWebhookConfigStore _webhookStore;
     private readonly ITestModeRuleStore _testModeStore;
     private readonly IChannelMessagingSettingsStore _channelSettingsStore;
+    private readonly IManualBookingStore _manualBookingStore;
+    private readonly IGuestEmailSender _guestEmailSender;
     private readonly WebhookDispatcher _webhookDispatcher;
     private readonly IErrorNotifier _errorNotifier;
     private readonly IClock _clock;
@@ -38,6 +40,8 @@ public sealed class BookingSyncOrchestrator
         IWebhookConfigStore webhookStore,
         ITestModeRuleStore testModeStore,
         IChannelMessagingSettingsStore channelSettingsStore,
+        IManualBookingStore manualBookingStore,
+        IGuestEmailSender guestEmailSender,
         WebhookDispatcher webhookDispatcher,
         IErrorNotifier errorNotifier,
         IClock clock,
@@ -53,6 +57,8 @@ public sealed class BookingSyncOrchestrator
         _webhookStore = webhookStore ?? throw new ArgumentNullException(nameof(webhookStore));
         _testModeStore = testModeStore ?? throw new ArgumentNullException(nameof(testModeStore));
         _channelSettingsStore = channelSettingsStore ?? throw new ArgumentNullException(nameof(channelSettingsStore));
+        _manualBookingStore = manualBookingStore ?? throw new ArgumentNullException(nameof(manualBookingStore));
+        _guestEmailSender = guestEmailSender ?? throw new ArgumentNullException(nameof(guestEmailSender));
         _webhookDispatcher = webhookDispatcher ?? throw new ArgumentNullException(nameof(webhookDispatcher));
         _errorNotifier = errorNotifier ?? throw new ArgumentNullException(nameof(errorNotifier));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -66,11 +72,9 @@ public sealed class BookingSyncOrchestrator
     {
         var settings = await _settingsStore.GetAsync(ct).ConfigureAwait(false);
 
-        if (string.IsNullOrWhiteSpace(settings.SmoobuApiKey) ||
-            string.IsNullOrWhiteSpace(settings.UnifiAccessHost) ||
-            string.IsNullOrWhiteSpace(settings.UnifiAccessApiToken))
+        if (string.IsNullOrWhiteSpace(settings.UnifiAccessHost) || string.IsNullOrWhiteSpace(settings.UnifiAccessApiToken))
         {
-            _logger.LogInformation("Sync skipped: Smoobu and/or UniFi Access are not fully configured yet.");
+            _logger.LogInformation("Sync skipped: UniFi Access is not configured yet.");
             return;
         }
 
@@ -78,16 +82,34 @@ public sealed class BookingSyncOrchestrator
         var windowStart = today.AddDays(-2);
         var windowEnd = today.AddDays(Math.Max(settings.MessageLeadDays, 0) + 30);
 
-        IReadOnlyList<Reservation> reservations;
+        var reservations = new List<Reservation>();
+
+        if (string.IsNullOrWhiteSpace(settings.SmoobuApiKey))
+        {
+            _logger.LogInformation("Smoobu isn't configured yet - only manual bookings will be processed this cycle.");
+        }
+        else
+        {
+            try
+            {
+                reservations.AddRange(await _smoobu.GetReservationsAsync(windowStart, windowEnd, ct).ConfigureAwait(false));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch reservations from Smoobu.");
+                await _errorNotifier.NotifyErrorAsync("Smoobu", "Failed to fetch reservations.", ex, ct).ConfigureAwait(false);
+            }
+        }
+
         try
         {
-            reservations = await _smoobu.GetReservationsAsync(windowStart, windowEnd, ct).ConfigureAwait(false);
+            var manualBookings = await _manualBookingStore.GetAllAsync(ct).ConfigureAwait(false);
+            reservations.AddRange(manualBookings.Select(ToReservation));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch reservations from Smoobu.");
-            await _errorNotifier.NotifyErrorAsync("Smoobu", "Failed to fetch reservations.", ex, ct).ConfigureAwait(false);
-            return;
+            _logger.LogError(ex, "Failed to load manual bookings.");
+            await _errorNotifier.NotifyErrorAsync("ManualBookings", "Failed to load manual bookings.", ex, ct).ConfigureAwait(false);
         }
 
         var testModeRules = await _testModeStore.GetAllAsync(ct).ConfigureAwait(false);
@@ -110,8 +132,8 @@ public sealed class BookingSyncOrchestrator
     /// <summary>Applies a manually-corrected plate/PIN from the review queue and immediately provisions access.</summary>
     public async Task ApproveManualReviewAsync(long reservationId, string licensePlate, string pinCode, CancellationToken ct = default)
     {
-        var reservation = await _smoobu.GetReservationAsync(reservationId, ct).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Reservation {reservationId} was not found in Smoobu.");
+        var reservation = await GetReservationAsync(reservationId, ct).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Reservation {reservationId} was not found.");
 
         var state = await _stateStore.GetAsync(reservationId, ct).ConfigureAwait(false)
             ?? new ReservationProcessingState { ReservationId = reservationId };
@@ -137,6 +159,36 @@ public sealed class BookingSyncOrchestrator
         state.MessagingOverrideEnabled = enabled;
         await _stateStore.SaveAsync(state, ct).ConfigureAwait(false);
     }
+
+    /// <summary>Looks up a reservation by id regardless of source - Smoobu ids go to Smoobu, ids in
+    /// the manual-booking range (see <see cref="ManualBookingReservationId"/>) go to the manual
+    /// booking store.</summary>
+    private async Task<Reservation?> GetReservationAsync(long reservationId, CancellationToken ct)
+    {
+        if (ManualBookingReservationId.TryGetManualBookingId(reservationId, out var manualBookingId))
+        {
+            var booking = await _manualBookingStore.GetAsync(manualBookingId, ct).ConfigureAwait(false);
+            return booking is null ? null : ToReservation(booking);
+        }
+
+        return await _smoobu.GetReservationAsync(reservationId, ct).ConfigureAwait(false);
+    }
+
+    private static Reservation ToReservation(ManualBooking booking) => new()
+    {
+        Id = ManualBookingReservationId.ToReservationId(booking.Id),
+        ApartmentId = booking.ApartmentId,
+        ApartmentName = booking.ApartmentName,
+        GuestFirstName = booking.GuestFirstName,
+        GuestLastName = booking.GuestLastName,
+        GuestEmail = booking.GuestEmail,
+        GuestLanguage = booking.GuestLanguage,
+        Channel = "Manual",
+        Arrival = booking.Arrival,
+        Departure = booking.Departure,
+        Status = booking.Cancelled ? ReservationStatus.Cancelled : ReservationStatus.Confirmed,
+        Source = ReservationSource.Manual,
+    };
 
     private async Task ProcessReservationAsync(
         Reservation reservation,
@@ -172,7 +224,21 @@ public sealed class BookingSyncOrchestrator
         }
 
         await MaybeSendRequestMessageAsync(reservation, state, settings, today, ct).ConfigureAwait(false);
-        await MaybeParseGuestReplyAsync(reservation, state, settings, ct).ConfigureAwait(false);
+
+        if (reservation.Source == ReservationSource.Manual)
+        {
+            // No inbound channel exists for a manually-entered booking's reply - once the request
+            // has gone out, it just waits in the manual-review queue for the host to fill in what
+            // the guest replied with by email.
+            if (state.RequestMessageSentAt is not null && state.AccessCreatedAt is null)
+            {
+                state.NeedsManualReview = true;
+            }
+        }
+        else
+        {
+            await MaybeParseGuestReplyAsync(reservation, state, settings, ct).ConfigureAwait(false);
+        }
 
         if (state.GuestReplyReceivedAt is not null && state.AccessCreatedAt is null && !state.NeedsManualReview)
         {
@@ -314,7 +380,31 @@ public sealed class BookingSyncOrchestrator
             body = "[TEST] " + body;
         }
 
-        await _smoobu.SendMessageToGuestAsync(reservation.Id, body, ct).ConfigureAwait(false);
+        if (reservation.Source == ReservationSource.Manual)
+        {
+            if (string.IsNullOrWhiteSpace(reservation.GuestEmail) || settings.Smtp is null)
+            {
+                _logger.LogWarning(
+                    "Couldn't email reservation {ReservationId}: a guest email and SMTP settings are both required for manual bookings.",
+                    reservation.Id);
+                return;
+            }
+
+            var subjectTemplate = template.Subject
+                ?? DefaultMessageTemplates.TryGetSubject(reservation.GuestLanguage ?? settings.DefaultTemplateLanguage, kind)
+                ?? "UniFi Smoobu Tool";
+            var subject = TemplateRenderer.Render(subjectTemplate, placeholders);
+            if (settings.TestModeEnabled)
+            {
+                subject = "[TEST] " + subject;
+            }
+
+            await _guestEmailSender.SendAsync(settings.Smtp, reservation.GuestEmail, subject, body, ct).ConfigureAwait(false);
+        }
+        else
+        {
+            await _smoobu.SendMessageToGuestAsync(reservation.Id, body, ct).ConfigureAwait(false);
+        }
     }
 
     private async Task ProvisionAccessAsync(

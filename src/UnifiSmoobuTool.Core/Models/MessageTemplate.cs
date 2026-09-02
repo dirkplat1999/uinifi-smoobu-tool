@@ -20,5 +20,10 @@ public sealed class MessageTemplate
 {
     public required string LanguageCode { get; init; }
     public MessageTemplateKind Kind { get; init; } = MessageTemplateKind.Request;
+
+    /// <summary>Only used when this template is sent by email (manual bookings have no Smoobu
+    /// thread, so there's no message subject otherwise). Ignored for Smoobu-sent messages.</summary>
+    public string? Subject { get; init; }
+
     public required string Body { get; init; }
 }
